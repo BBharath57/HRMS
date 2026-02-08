@@ -1227,10 +1227,46 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
 sys.path.insert(0, parent_dir)
 
-from db import get_db
+from db import get_db, engine, Base, SessionLocal
 from models import Employee, Onboarding, LeaveRequest
 from rag_pipeline import retriever, llm
 from hr_graph import build_graph
+
+
+# ==========================================
+#  🛠️ AUTO-SETUP (Self-Healing Database)
+# ==========================================
+def initialize_database():
+    """Creates tables and the first admin user if they don't exist."""
+    try:
+        # 1. Create All Tables (Safe to run multiple times)
+        Base.metadata.create_all(bind=engine)
+        
+        # 2. Check & Create Admin
+        db = SessionLocal()
+        admin_email = "bharathkumarking143@gmail.com"
+        existing_admin = db.query(Employee).filter(Employee.email == admin_email).first()
+        
+        if not existing_admin:
+            admin = Employee(
+                name="Admin",
+                email=admin_email,
+                password="Admin", # <--- THIS IS YOUR LOGIN PASSWORD
+                role="admin",
+                onboarding_status="active"
+            )
+            db.add(admin)
+            db.commit()
+            print("✅ System: Auto-created Super Admin.")
+        
+        db.close()
+    except Exception as e:
+        print(f"⚠️ System: Database setup warning: {e}")
+
+# Run this ONCE when the script loads
+initialize_database()
+
+
 
 st.set_page_config(page_title="Office Assistant", layout="centered")
 
