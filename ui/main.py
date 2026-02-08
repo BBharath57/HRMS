@@ -1234,37 +1234,43 @@ from hr_graph import build_graph
 
 
 # ==========================================
-#  🛠️ AUTO-SETUP (Self-Healing Database)
+#  🛠️ AUTO-SETUP (Critical: Run First)
 # ==========================================
-def initialize_database():
-    """Creates tables and the first admin user if they don't exist."""
+def initialize_system():
+    """Forces table creation and Admin user generation on startup."""
     try:
-        # 1. Create All Tables (Safe to run multiple times)
+        # 1. Create All Tables
         Base.metadata.create_all(bind=engine)
         
         # 2. Check & Create Admin
         db = SessionLocal()
         admin_email = "bharathkumarking143@gmail.com"
-        existing_admin = db.query(Employee).filter(Employee.email == admin_email).first()
         
-        if not existing_admin:
-            admin = Employee(
-                name="Admin",
-                email=admin_email,
-                password="Admin", # <--- THIS IS YOUR LOGIN PASSWORD
-                role="admin",
-                onboarding_status="active"
-            )
-            db.add(admin)
-            db.commit()
-            print("✅ System: Auto-created Super Admin.")
-        
+        # Use a safe query to check if admin exists
+        try:
+            existing_admin = db.query(Employee).filter(Employee.email == admin_email).first()
+            if not existing_admin:
+                admin = Employee(
+                    name="Bharath Admin",
+                    email=admin_email,
+                    password="Admin",  # Password from your error log
+                    role="admin",
+                    onboarding_status="active"
+                )
+                db.add(admin)
+                db.commit()
+                print(f"✅ AUTO-SETUP: Admin {admin_email} created.")
+            else:
+                print("✅ AUTO-SETUP: Admin already exists.")
+        except Exception as e:
+             print(f"⚠️ AUTO-SETUP Query Error: {e}")
+             
         db.close()
     except Exception as e:
-        print(f"⚠️ System: Database setup warning: {e}")
+        print(f"⚠️ AUTO-SETUP Critical Error: {e}")
 
-# Run this ONCE when the script loads
-initialize_database()
+# 🔥 CALL THIS IMMEDIATELY
+initialize_system()
 
 
 
@@ -1292,7 +1298,7 @@ if "last_notif_check" not in st.session_state:
         "last_poll_time": time.time()
     }
 
-db = next(get_db())
+# db = next(get_db())
 
 # ==========================================
 #      LOGIN SCREEN
@@ -1318,6 +1324,10 @@ if st.session_state.user_email is None:
 #      MAIN INTERFACE
 # ==========================================
 else:
+    # Get a fresh DB session for the main app
+    db = next(get_db())
+
+
     role = st.session_state.role
     user_email = st.session_state.user_email
 
