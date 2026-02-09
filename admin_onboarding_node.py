@@ -467,7 +467,9 @@ def admin_onboarding_node(state):
                 emp = db.query(Employee).filter(Employee.id == l.employee_id).first()
                 name = emp.name if emp else "Unknown"
                 days = (l.end_date - l.start_date).days + 1
-                msg += f"| **{name}** | {l.start_date.strftime('%Y-%m-%d')} | {l.type.title()} | {days} |\n"
+
+                # 👇 FIX IS HERE: Changed l.type to l.leave_type
+                msg += f"| **{name}** | {l.start_date.strftime('%Y-%m-%d')} | {l.leave_type.title()} | {days} |\n"
             
             msg += "\n**Actions:**\n- `Approve leave for [Name]`\n- `Reject leave for [Name]`\n- `Approve leaves for all`"
             state["messages"].append({"role": "assistant", "content": msg})
