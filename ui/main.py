@@ -1569,6 +1569,34 @@ from models import Employee, Onboarding, LeaveRequest
 from rag_pipeline import retriever, llm
 from hr_graph import build_graph
 
+def remove_fading_animations():
+    st.markdown("""
+        <style>
+            /* 1. Stop the "Graying Out" / Fading effect during processing */
+            .stApp {
+                transition: none !important;
+            }
+            
+            /* Target the main container to prevent opacity drops */
+            div[data-testid="stAppViewContainer"] {
+                opacity: 1 !important;
+                transition: none !important;
+                filter: none !important;
+            }
+            
+            /* 2. Hide the 'Running' spinner in the top right (Optional - makes it feel faster) */
+            div[data-testid="stStatusWidget"] {
+                visibility: hidden;
+            }
+            
+            /* 3. Force all elements to appear instantly without sliding/fading */
+            .element-container, .stMarkdown, .stButton, .stTextInput {
+                transition: none !important;
+                animation: none !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
 # ==========================================
 #  🛠️ CRITICAL: AUTO-SETUP (Self-Healing)
 # ==========================================
@@ -1622,6 +1650,8 @@ def initialize_system():
 
 # 🔥 CALL THIS IMMEDIATELY
 initialize_system()
+
+remove_fading_animations()
 
 # ==========================================
 #  APP CONFIG
