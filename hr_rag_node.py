@@ -25,7 +25,7 @@ def get_employee_context(db, employee):
     paid_left = 1 - employee.used_paid_leaves
     emergency_left = 1 - employee.used_emergency_leaves
     last_leave = db.query(LeaveRequest).filter(LeaveRequest.employee_id == employee.id).order_by(desc(LeaveRequest.created_at)).first()
-    leave_status = f"{last_leave.type} ({last_leave.status})" if last_leave else "None"
+    leave_status = f"{last_leave.leave_type} ({last_leave.status})" if last_leave else "None"
 
     # Included Emails here so RAG can answer "give me email"
     return (f"Name: {employee.name}, Role: {employee.role}, "
