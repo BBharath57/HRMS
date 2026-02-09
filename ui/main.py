@@ -1545,6 +1545,7 @@
 
 
 
+
 """
 ui/main.py
 """
@@ -1561,19 +1562,39 @@ sys.path.insert(0, parent_dir)
 
 # --- IMPORTS ---
 from db import get_db, engine, Base, SessionLocal
-import models
+# We delay importing models slightly to ensure Base is ready, 
+# but we MUST import them for create_all to work.
+import models 
 from models import Employee, Onboarding, LeaveRequest
 from rag_pipeline import retriever, llm
 from hr_graph import build_graph
 
+# ==========================================
+#  APP CONFIG
+# ==========================================
 st.set_page_config(page_title="Office Assistant", layout="centered")
 
 def remove_fading_animations():
     st.markdown("""
         <style>
-            .stApp { transition: none !important; }
-            div[data-testid="stAppViewContainer"] { opacity: 1 !important; }
-            div[data-testid="stStatusWidget"] { visibility: hidden; }
+            /* 1. Stop the "Graying Out" / Fading effect during processing */
+            .stApp {
+                transition: none !important;
+            }
+            
+            /* Target the main container to prevent opacity drops */
+            div[data-testid="stAppViewContainer"] {
+                opacity: 1 !important;
+                transition: none !important;
+                filter: none !important;
+            }
+            
+            /* 2. Hide the 'Running' spinner in the top right (Optional - makes it feel faster) */
+            div[data-testid="stStatusWidget"] {
+                visibility: hidden;
+            }
+            
+            /* 3. Force all elements to appear instantly without sliding/fading */
             .element-container, .stMarkdown, .stButton, .stTextInput {
                 transition: none !important;
                 animation: none !important;
@@ -1591,33 +1612,63 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ==========================================
+#  🛠️ CRITICAL: AUTO-SETUP (Self-Healing)
+# ==========================================
 def initialize_system():
+    """Forces table creation and Admin user generation on startup."""
+    print("⚡ INITIALIZING DATABASE SYSTEM...")
     try:
+        # 1. DEBUG: Check if models are registered
+        print(f"🔍 DEBUG: Tables found in metadata: {list(Base.metadata.tables.keys())}")
+        
+        if not Base.metadata.tables:
+            print("⚠️ CRITICAL WARNING: No tables found in metadata! Models might not be imported correctly.")
+
+        # 2. Force Create All Tables
         Base.metadata.create_all(bind=engine)
+        print("✅ TABLES CREATION STEP COMPLETED")
+        
+        # 3. Verify Creation using Inspector
         inspector = inspect(engine)
-        if "employees" not in inspector.get_table_names():
+        existing_tables = inspector.get_table_names()
+        print(f"🔍 DEBUG: Tables actually in DB: {existing_tables}")
+
+        if "employees" not in existing_tables:
+            print("❌ ERROR: 'employees' table still missing after creation attempt.")
             return
 
+        # 4. Create Admin User
         db = SessionLocal()
-        admin_email = os.getenv("SENDER_EMAIL")
+        admin_email = os.getenv("SENDER_EMAIL") # <--- YOUR EMAIL
+        
+        # Now it is safe to query because we verified the table exists
         existing_admin = db.query(Employee).filter(Employee.email == admin_email).first()
-
+        
         if not existing_admin:
             admin = Employee(
                 name="Bharath Admin",
                 email=admin_email,
-                password="Admin",
+                password="Admin", 
                 role="admin",
                 onboarding_status="active"
             )
             db.add(admin)
             db.commit()
+            print(f"✅ ADMIN USER CREATED: {admin_email}")
+        else:
+            print("✅ Admin user already exists.")
+        
         db.close()
-    except:
-        pass
+    except Exception as e:
+        print(f"⚠️ SETUP EXCEPTION: {e}")
 
+# 🔥 CALL THIS IMMEDIATELY
 initialize_system()
 
+
+
+# --- SESSION STATE ---
 if "user_email" not in st.session_state: st.session_state.user_email = None
 if "role" not in st.session_state: st.session_state.role = None
 if "user_sessions" not in st.session_state: st.session_state.user_sessions = {}
@@ -1630,110 +1681,248 @@ if "last_notif_check" not in st.session_state:
         "last_poll_time": time.time()
     }
 
-# LOGIN
+# ==========================================
+#      LOGIN SCREEN
+# ==========================================
 if st.session_state.user_email is None:
     st.title("🏢 VOLTA HR Portal")
+    st.info("Log in with your Admin credentials.")
+    
+    with st.container():
+        email = st.text_input("Email", key="login_email").strip().lower()
+        password = st.text_input("Password", type="password", key="login_pass")
+        
+        if st.button("Login", type="primary"):
+            # Use a fresh session for login
+            try:
+                login_db = SessionLocal()
+                user = login_db.query(Employee).filter(Employee.email == email, Employee.password == password).first()
+                login_db.close()
+                
+                if user:
+                    st.session_state.user_email = user.email
+                    st.session_state.role = user.role
+                    st.session_state.notification_checked = False 
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid Credentials.")
+            except Exception as e:
+                st.error(f"Login Error: {e}")
 
-    email = st.text_input("Email").strip().lower()
-    password = st.text_input("Password", type="password")
 
-    if st.button("Login", type="primary"):
-        db = SessionLocal()
-        user = db.query(Employee).filter(Employee.email == email, Employee.password == password).first()
-        db.close()
-
-        if user:
-            st.session_state.user_email = user.email
-            st.session_state.role = user.role
-            st.rerun()
-        else:
-            st.error("Invalid Credentials")
-
+# ==========================================
+#      MAIN INTERFACE
+# ==========================================
 else:
+    # Use a fresh session for the main app logic
     db = SessionLocal()
-    user_email = st.session_state.user_email
-    role = st.session_state.role
-    user_obj = db.query(Employee).filter(Employee.email == user_email).first()
+    
+    try:
+        role = st.session_state.role
+        user_email = st.session_state.user_email
 
-    if user_email not in st.session_state.user_sessions:
-        st.session_state.user_sessions[user_email] = {
-            "messages": [], "graph_context": {"onboarding_active": False, "leave_draft": {}}
-        }
+        # 1. FETCH USER DETAILS
+        user_obj = db.query(Employee).filter(Employee.email == user_email).first()
 
-    current_session = st.session_state.user_sessions[user_email]
+        # 🛡️ AUTO-REFRESH FIX: 
+        # If DB says "active" but Session thought "details_submitted", RERUN immediately.
+        if user_obj and user_obj.onboarding_status == "active" and st.session_state.get("last_status") != "active":
+             st.session_state["last_status"] = "active"
+             st.rerun() # <--- This forces the page to reload and show the Chat Interface
 
-    @st.fragment
-    def poll_notifications():
-        local_db = SessionLocal()
+        display_name = user_obj.name if user_obj else user_email
+        
+        # --- SIDEBAR ---
+        with st.sidebar:
+            st.write(f"👤 **{display_name}**")
+            st.write(f"🛠️ Role: **{role.title()}**")
+            
+            if st.button("🗑️ Clear My Chat"):
+                 if user_email in st.session_state.user_sessions:
+                     st.session_state.user_sessions[user_email] = {
+                        "messages": [], "graph_context": {"onboarding_active": False, "leave_draft": {}}
+                     }
+                     st.session_state.notification_checked = False
+                     st.rerun()
 
-        try:
-            if role == "admin":
-                p_leave = local_db.query(LeaveRequest).filter(LeaveRequest.status == "pending_approval").count()
-                p_onboard = local_db.query(Employee).filter(Employee.onboarding_status == "details_submitted").count()
-                total = p_leave + p_onboard
+            if st.button("🚪 Logout"):
+                st.session_state.user_email = None
+                st.session_state.role = None
+                st.rerun()
 
-                if not st.session_state.notification_checked:
-                    st.session_state.notification_checked = True
-                    current_session["messages"].append({
-                        "role": "assistant",
-                        "content": f"👋 Welcome Admin. Pending: {total}"
-                    })
+        # Load Session
+        if user_email not in st.session_state.user_sessions:
+            st.session_state.user_sessions[user_email] = {
+                "messages": [], "graph_context": {"onboarding_active": False, "leave_draft": {}}
+            }
+        current_session = st.session_state.user_sessions[user_email]
 
-                elif total > st.session_state.last_notif_check["admin_pending_count"]:
-                    st.toast("🔔 New Request")
-                    current_session["messages"].append({
-                        "role": "assistant",
-                        "content": "🔔 New Request Received!"
-                    })
+        # =========================================================
+        #  🔄 NOTIFICATION LOGIC
+        # =========================================================
+        @st.fragment(run_every=3)
+        def poll_notifications():
+            if not st.session_state.user_email: return
+            local_db = SessionLocal()
+            try:
+                # --- ADMIN CHECK ---
+                if role == "admin":
+                    p_leave = local_db.query(LeaveRequest).filter(LeaveRequest.status == "pending_approval").count()
+                    p_onboard = local_db.query(Employee).filter(Employee.onboarding_status == "details_submitted").count()
+                    current_total = p_leave + p_onboard
+                    last_total = st.session_state.last_notif_check["admin_pending_count"]
+                    
+                    if not st.session_state.notification_checked:
+                        st.session_state.notification_checked = True
+                        st.session_state.last_notif_check["admin_pending_count"] = current_total
+                        
+                        if current_total > 0:
+                            msg = f"👋 **Welcome Admin!**\nUpdates: {p_leave} Leave, {p_onboard} Onboarding pending.\nType **'show pending requests'**."
+                        else:
+                            msg = "👋 **Welcome Admin!** All systems operational. No pending requests."
 
-                st.session_state.last_notif_check["admin_pending_count"] = total
+                        current_session["messages"].append({"role": "assistant", "content": msg})
+                        time.sleep(1)
+                        st.rerun()
 
-            else:
-                last_leave = local_db.query(LeaveRequest).filter(
-                    LeaveRequest.employee_id == user_obj.id,
-                    LeaveRequest.notification_seen == False
-                ).order_by(desc(LeaveRequest.created_at)).first()
+                    elif current_total > last_total:
+                        st.session_state.last_notif_check["admin_pending_count"] = current_total 
+                        new_count = current_total - last_total
+                        st.toast(f"🔔 {new_count} New Request(s)!", icon="🔔")
+                        current_session["messages"].append({"role": "assistant", "content": f"🔔 **New Request Received!**\nTotal Pending: {current_total}\nType **'show pending requests'**."})
+                        time.sleep(2)
+                        st.rerun()
+                    
+                    if current_total != last_total:
+                        st.session_state.last_notif_check["admin_pending_count"] = current_total
 
-                if last_leave:
-                    last_leave.notification_seen = True
-                    local_db.commit()
-                    st.toast("Leave Updated")
-                    current_session["messages"].append({
-                        "role": "assistant",
-                        "content": "Leave Status Updated"
-                    })
+                # --- EMPLOYEE CHECK ---
+                elif role == "employee":
+                    last_leave = local_db.query(LeaveRequest).filter(
+                        LeaveRequest.employee_id == user_obj.id, 
+                        LeaveRequest.notification_seen == False
+                    ).order_by(desc(LeaveRequest.created_at)).first()
+                    
+                    if not st.session_state.notification_checked:
+                        st.session_state.notification_checked = True
+                        if last_leave and last_leave.status in ["approved", "rejected"]:
+                            icon = "✅" if last_leave.status == "approved" else "❌"
+                            msg = f"👋 **Hi {user_obj.name}!**\n\n{icon} **Update:** Your leave for **{last_leave.start_date.date()}** was **{last_leave.status.upper()}**."
+                            last_leave.notification_seen = True
+                            local_db.commit()
+                        else:
+                            msg = f"👋 **Hi {user_obj.name}!** I'm ready to solve your queries."
+                        
+                        current_session["messages"].append({"role": "assistant", "content": msg})
+                        time.sleep(1)
+                        st.rerun()
 
-        finally:
-            local_db.close()
+                    elif last_leave and last_leave.status in ["approved", "rejected"]:
+                        last_leave.notification_seen = True
+                        local_db.commit()
+                        icon = "✅" if last_leave.status == "approved" else "❌"
+                        msg = f"{icon} **Update:** Your leave for **{last_leave.start_date.date()}** was **{last_leave.status.upper()}**."
+                        st.toast(f"Leave {last_leave.status.title()}!", icon=icon)
+                        current_session["messages"].append({"role": "assistant", "content": msg})
+                        time.sleep(2)
+                        st.rerun()
+            finally:
+                local_db.close()
 
-    poll_notifications()
+        poll_notifications()
+        
+        # =========================================================
+        #  SCENARIO A: ONBOARDING FORM
+        # =========================================================
+        if role == "employee" and user_obj.onboarding_status == "onboarding_triggered":
+            st.title("📝 Complete Your Profile")
+            with st.form("onboarding_form"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    f_name = st.text_input("Full Name", value=user_obj.name)
+                    f_age = st.number_input("Age", 18, 100)
+                    f_dob = st.date_input("Date of Birth")
+                    f_nationality = st.text_input("Nationality", value="Indian")
+                    f_mobile = st.text_input("Mobile Number")
+                with col2:
+                    f_blood = st.selectbox("Blood Group", ["O+", "A+", "B+", "AB+"])
+                    f_marital = st.selectbox("Marital Status", ["Single", "Married"])
+                    f_state = st.selectbox("State", ["Telangana", "Andhra Pradesh", "Other"])
+                    f_aadhaar = st.text_input("Aadhaar Number")
+                    f_pan = st.text_input("PAN Card")
+                f_address = st.text_area("Address")
+                f_agree = st.checkbox("✅ I declare the above information is true.")
+                
+                if st.form_submit_button("Submit Details"):
+                    if f_agree and len(f_mobile) >= 10:
+                        data_blob = f"Name: {f_name}\nMobile: {f_mobile}\nDOB: {f_dob}\nAddress: {f_address}\nPAN: {f_pan}\nAadhaar: {f_aadhaar}"
+                        onboard_record = db.query(Onboarding).filter(Onboarding.employee_id == user_obj.id).first()
+                        if not onboard_record:
+                            onboard_record = Onboarding(employee_id=user_obj.id, step=5, data=data_blob, completed=False)
+                            db.add(onboard_record)
+                        else:
+                            onboard_record.data = data_blob
+                        user_obj.onboarding_status = "details_submitted"
+                        db.commit()
+                        st.success("✅ Submitted! HR will review shortly.")
+                        st.rerun()
+                    else:
+                        st.error("⚠️ Please fill all valid details and accept the declaration.")
 
-    st.title(f"{role.title()} Assistant")
+        # =========================================================
+        #  SCENARIO B: WAITING
+        # =========================================================
+        elif role == "employee" and user_obj.onboarding_status == "details_submitted":
+            st.title("⏳ Under Review")
+            st.info("Your details are being reviewed by Admin.")
 
-    for m in current_session["messages"]:
-        with st.chat_message(m["role"]):
-            st.markdown(m["content"])
+        # =========================================================
+        #  SCENARIO C: CHAT
+        # =========================================================
+        else:
+            st.title(f"💬 {role.title()} Assistant")
+            
+            for msg in current_session["messages"]:
+                avatar = "🤖" if msg["role"] == "assistant" else "🧑‍💻"
+                with st.chat_message(msg["role"], avatar=avatar): st.markdown(msg["content"])
 
-    if user_input := st.chat_input("Type here"):
-        current_session["messages"].append({"role": "user", "content": user_input})
+            if user_input := st.chat_input("Type here..."):
+                current_session["messages"].append({"role": "user", "content": user_input})
+                with st.chat_message("user", avatar="🧑‍💻"): st.markdown(user_input)
+                
+                state = {
+                    "message": user_input, "user_id": user_email, "role": role, 
+                    "messages": current_session["messages"], "db": db, "retriever": retriever, "llm": llm, "db_user": user_obj,
+                    "onboarding_active": current_session["graph_context"].get("onboarding_active", False),
+                    "leave_draft": current_session["graph_context"].get("leave_draft", {}),
+                    "notification": None
+                }
+                
+                graph = build_graph(db, retriever, llm)
+                with st.status("🤖 **Agent is thinking...**", expanded=True) as status:
+                    st.write("🔄 Analyzing user intent...")
+                    final_state = graph.invoke(state)
+                    
+                    intent = final_state.get("intent", "unknown")
+                    if intent == "leave": st.write("🗓️ Accessing Leave Module...")
+                    elif intent == "admin_onboarding": st.write("🔐 Checking Admin Database...")
+                    elif intent == "hr_query": st.write("📚 Searching Employee Handbook...")
+                    
+                    status.update(label="✅ Response Ready", state="complete", expanded=False)
 
-        state = {
-            "message": user_input,
-            "user_id": user_email,
-            "role": role,
-            "messages": current_session["messages"],
-            "db": db,
-            "retriever": retriever,
-            "llm": llm,
-            "db_user": user_obj,
-            "onboarding_active": current_session["graph_context"]["onboarding_active"],
-            "leave_draft": current_session["graph_context"]["leave_draft"]
-        }
-
-        graph = build_graph(db, retriever, llm)
-        final_state = graph.invoke(state)
-
-        current_session["messages"] = final_state["messages"]
-        st.rerun()
-
-    db.close()
+                current_session["messages"] = final_state["messages"]
+                current_session["graph_context"]["onboarding_active"] = final_state.get("onboarding_active", False)
+                current_session["graph_context"]["leave_draft"] = final_state.get("leave_draft", {})
+                
+                if final_state.get("notification"): 
+                    st.toast(final_state["notification"], icon="🔔")
+                    time.sleep(1) # Small delay for action toast
+                
+                last_msg = final_state["messages"][-1]
+                if last_msg["role"] == "assistant":
+                    with st.chat_message("assistant", avatar="🤖"): st.markdown(last_msg["content"])
+                
+                st.rerun()
+    finally:
+        # ALWAYS CLOSE THE DB SESSION TO PREVENT LEAKS
+        db.close()
