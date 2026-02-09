@@ -440,7 +440,6 @@ leave_node.py
 
 
 
-
 """
 leave_node.py
 """
@@ -450,8 +449,9 @@ from email_service import send_email
 import re
 import os
 
-APP_LINK = "https://hrms-luca.onrender.com" # Updated to your Render URL
-ADMIN_EMAIL = os.getenv("SENDER_EMAIL")
+APP_LINK = "https://hrms-luca.onrender.com" 
+# Recommendation: Send to your personal email to verify it works
+ADMIN_EMAIL = "bharathkumarking143@gmail.com" 
 
 def is_valid_date(date_str):
     return bool(re.match(r"^\d{4}-\d{2}-\d{2}$", date_str.strip()))
@@ -530,7 +530,6 @@ def leave_node(state):
             if duration_val == "half day" and leave_draft["start_date"] != leave_draft["end_date"]:
                 response = f"❌ **Error:** Half Day requires Start Date and End Date to be the same.\nType **'Full Day'** or **'Exit'**."
             else:
-                # Balance Check
                 days_cost = calculate_days(leave_draft["start_date"], leave_draft["end_date"], duration_val)
                 can_proceed = True
                 if leave_draft["type"] == "emergency":
@@ -592,7 +591,6 @@ def leave_node(state):
             leave_draft["final_preview"] = final_email_preview 
             response = f"""📩 **Final Preview:**\n{final_email_preview}\n👥 **Step 8: Notify Teammates (CC)**\nWho else should be notified? (Team Lead, Teammates?)\n*Enter emails separated by commas, or type **'None'**.*"""
         else:
-            # Edit draft
             current = leave_draft["email_body"]
             prompt = f"Rewrite email: '{current}'. Change request: '{message}'. Return only updated body."
             try:
@@ -609,18 +607,16 @@ def leave_node(state):
             raw_ccs = message.replace(" ", "").split(",")
             cc_list = [email for email in raw_ccs if "@" in email]
 
-        # Update Balance
         days = calculate_days(leave_draft["start_date"], leave_draft["end_date"], leave_draft["duration"])
         if leave_draft["type"] == "emergency": 
             employee.used_emergency_leaves += days
         
-        # --- FIX: THIS IS WHERE THE ERROR WAS ---
         new_req = LeaveRequest(
             employee_id=employee.id,
             reason=leave_draft["reason"],
             start_date=datetime.strptime(leave_draft["start_date"], "%Y-%m-%d"),
             end_date=datetime.strptime(leave_draft["end_date"], "%Y-%m-%d"),
-            leave_type=leave_draft["type"], # <--- CHANGED FROM 'type' TO 'leave_type'
+            leave_type=leave_draft["type"], 
             status="pending_approval"
         )
         db.add(new_req)
@@ -629,18 +625,21 @@ def leave_node(state):
         # Send Email
         final_body = f"{leave_draft['email_body']}\n\n--------------------------------\n🔴 Admin Action Required: Login to Portal to Approve/Reject."
         
-        try:
-            send_email(
-                to_email=ADMIN_EMAIL, 
-                subject=f"Leave Request: {user_name} ({leave_draft['type']})", 
-                body=final_body,
-                cc_emails=cc_list
-            )
-            cc_msg = f" (CC: {', '.join(cc_list)})" if cc_list else ""
-            response = f"✅ **Request Sent!**\n\n📩 Sent to Admin{cc_msg}.\n📅 Status: Pending Approval."
-            state["notification"] = "🚀 Leave Applied Successfully!"
-        except Exception as e:
-            response = f"✅ Request saved to DB, but Email failed (Check Logs).\nStatus: Pending Approval."
+        # 👇 FIX: Check Return Value directly!
+        email_success = send_email(
+            to_email=ADMIN_EMAIL, 
+            subject=f"Leave Request: {user_name} ({leave_draft['type']})", 
+            body=final_body,
+            cc_emails=cc_list
+        )
+
+        cc_msg = f" (CC: {', '.join(cc_list)})" if cc_list else ""
+        
+        if email_success:
+             response = f"✅ **Request Sent!**\n\n📩 Sent to Admin{cc_msg}.\n📅 Status: Pending Approval."
+             state["notification"] = "🚀 Leave Applied Successfully!"
+        else:
+             response = f"⚠️ **Request Saved**, but Email Failed.\n(Admin can still see it on the Dashboard)."
         
         leave_draft = {} 
 
