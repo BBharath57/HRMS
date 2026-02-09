@@ -44,27 +44,33 @@ load_dotenv()
 #  DATABASE CONNECTION LOGIC
 # =========================================================
 
-# 1. Try to get the full URL first (Render provides this automatically)
+# 1. Get the Database URL from Environment
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# 2. If NOT found, build it manually (Fallback for Local / Custom Docker)
-if not DATABASE_URL:
-    POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
-    POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "yourpassword")
-    POSTGRES_DB = os.getenv("POSTGRES_DB", "hrms")
-    POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
-    POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
+# 2. Configure based on what we found
+if DATABASE_URL:
+    print("✅ Using Cloud/Env Database")
+    # Fix for Render's URL format (postgres:// -> postgresql://)
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
     
-    DATABASE_URL = f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+    # Create Engine for PostgreSQL
+    engine = create_engine(DATABASE_URL)
 
-# 3. FIX FOR RENDER: SQLAlchemy requires 'postgresql://', but Render uses 'postgres://'
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+else:
+    print("⚠️  No DATABASE_URL found. Using Local SQLite Database.")
+    DATABASE_URL = "sqlite:///./hrms.db"
+    
+    # ⚠️ CRITICAL FOR SQLITE IN STREAMLIT/FASTAPI:
+    # "check_same_thread": False is required for SQLite to work in multi-threaded apps
+    engine = create_engine(
+        DATABASE_URL, 
+        connect_args={"check_same_thread": False}
+    )
 
 # =========================================================
-#  ENGINE & SESSION
+#  SESSION & BASE
 # =========================================================
-engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
