@@ -49,7 +49,7 @@ from email.mime.multipart import MIMEMultipart
 
 # --- CONFIGURATION ---
 SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 465
+SMTP_PORT = 587 #465
 # REPLACE THESE WITH YOUR REAL CREDENTIALS
 SENDER_EMAIL = "bharathkumarking143@gmail.com" 
 SENDER_PASSWORD = "hwof xigt mrnx yrcl"  # App Password

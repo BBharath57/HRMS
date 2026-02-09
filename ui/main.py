@@ -1691,6 +1691,13 @@ else:
 
         # 1. FETCH USER DETAILS
         user_obj = db.query(Employee).filter(Employee.email == user_email).first()
+        
+        # 🛡️ AUTO-REFRESH FIX: 
+        # If DB says "active" but Session thought "details_submitted", RERUN immediately.
+        if user_obj and user_obj.onboarding_status == "active" and st.session_state.get("last_status") != "active":
+             st.session_state["last_status"] = "active"
+             st.rerun() # <--- This forces the page to reload and show the Chat Interface
+
         display_name = user_obj.name if user_obj else user_email
         
         # --- SIDEBAR ---

@@ -624,32 +624,42 @@ _Select a category above to take action._
     # 7. REMIND, FINALIZE & REJECT
     # =========================================================
     if "remind" in message:
-        name_target = extract_name(message, ["remind", "send reminder"])
-        user = db.query(Employee).filter(Employee.name.ilike(f"%{name_target}%"), Employee.onboarding_status == "onboarding_triggered").first()
+        name_target = extract_name(message, ["remind", "send reminder", "reminder"])
+        # Fix: Search loosely for the name
+        user = db.query(Employee).filter(Employee.name.ilike(f"%{name_target}%")).first()
+        
         if user:
-            send_email(user.email, "Reminder: Complete Onboarding", f"Hi {user.name},\n\nPlease login to complete your details.")
-            state["messages"].append({"role": "assistant", "content": f"✅ Reminder sent to {user.name}."})
+            # Check if they actually need a reminder
+            if user.onboarding_status in ["onboarding_triggered", "details_submitted"]:
+                send_email(user.email, "Action Required: Complete Onboarding", f"Hi {user.name},\n\nPlease login to complete your onboarding.")
+                state["messages"].append({"role": "assistant", "content": f"✅ Reminder sent to **{user.name}**."})
+            elif user.onboarding_status == "active":
+                state["messages"].append({"role": "assistant", "content": f"ℹ️ {user.name} is already active."})
+            else:
+                 state["messages"].append({"role": "assistant", "content": f"ℹ️ {user.name} has status: {user.onboarding_status}."})
         else:
-            state["messages"].append({"role": "assistant", "content": "⚠️ User not pending or not found."})
+            state["messages"].append({"role": "assistant", "content": f"⚠️ User '{name_target}' not found."})
         return state
 
+    # 2. FINALIZE COMMAND
     if "finalize" in message:
-        name_target = extract_name(message, ["finalize"])
-        user = db.query(Employee).filter(Employee.name.ilike(f"%{name_target}%"), Employee.onboarding_status == "details_submitted").first()
-        if user:
+        name_target = extract_name(message, ["finalize", "approve"])
+        user = db.query(Employee).filter(Employee.name.ilike(f"%{name_target}%")).first()
+        
+        if user and user.onboarding_status == "details_submitted":
             new_id = f"EMP{random.randint(1000,9999)}"
             user.employee_id_str = new_id
             user.onboarding_status = "active"
             db.commit()
             
-            # Welcome Email
-            send_email(user.email, f"Welcome - {user.name}", f"Welcome to Volta! Your ID: {new_id}")
-            # IT Dispatch
-            send_email(user.email, f"IT Asset Dispatch - {user.name}", "Your laptop has been dispatched.")
-
-            state["messages"].append({"role": "assistant", "content": f"✅ **{user.name}** is now Active (ID: `{new_id}`).\n\n📧 Emails Sent."})
+            # Emails
+            send_email(user.email, f"Welcome to Volta! (ID: {new_id})", f"Hi {user.name},\n\nCongratulations! Your onboarding is complete.\nYour Employee ID is {new_id}.\n\nPlease REFRESH your portal to access the Employee Chat.")
+            
+            state["messages"].append({"role": "assistant", "content": f"✅ **{user.name}** is now Active (ID: `{new_id}`).\n📧 Welcome email sent."})
+        elif user:
+             state["messages"].append({"role": "assistant", "content": f"⚠️ {user.name} is not ready (Status: {user.onboarding_status})."})
         else:
-            state["messages"].append({"role": "assistant", "content": "⚠️ User not ready to finalize."})
+            state["messages"].append({"role": "assistant", "content": f"⚠️ User '{name_target}' not found."})
         return state
 
     if "reject" in message:
