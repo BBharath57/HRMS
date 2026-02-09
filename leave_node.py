@@ -450,7 +450,7 @@ from email_service import send_email
 import re
 
 APP_LINK = "https://hrms-luca.onrender.com" # Updated to your Render URL
-ADMIN_EMAIL = "bharathkumarking143@gmail.com"
+ADMIN_EMAIL = os.getenv("SENDER_EMAIL")
 
 def is_valid_date(date_str):
     return bool(re.match(r"^\d{4}-\d{2}-\d{2}$", date_str.strip()))

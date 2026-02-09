@@ -1597,7 +1597,7 @@ def initialize_system():
 
         # 4. Create Admin User
         db = SessionLocal()
-        admin_email = "bharathkumarking143@gmail.com"  # <--- YOUR EMAIL
+        admin_email = os.getenv("SENDER_EMAIL") # <--- YOUR EMAIL
         
         # Now it is safe to query because we verified the table exists
         existing_admin = db.query(Employee).filter(Employee.email == admin_email).first()
@@ -1691,7 +1691,7 @@ else:
 
         # 1. FETCH USER DETAILS
         user_obj = db.query(Employee).filter(Employee.email == user_email).first()
-        
+
         # 🛡️ AUTO-REFRESH FIX: 
         # If DB says "active" but Session thought "details_submitted", RERUN immediately.
         if user_obj and user_obj.onboarding_status == "active" and st.session_state.get("last_status") != "active":

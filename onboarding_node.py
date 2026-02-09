@@ -285,7 +285,7 @@ def onboarding_node(state):
         db.commit()
         
         # Email Admin
-        admin_email = "bharathkumarking143@gmail.com" # Or fetch from DB
+        admin_email = os.getenv("SENDER_EMAIL") # Or fetch from DB
         send_email(admin_email, "Action: Onboarding Details Filled", f"User {employee.name} has filled their details.\nPlease login to Admin Chat to finalize onboarding.")
         
         response_text = "✅ **Details Submitted!** I have notified the Admin. Please wait for your Offer Letter."
