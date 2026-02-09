@@ -1569,6 +1569,11 @@ from models import Employee, Onboarding, LeaveRequest
 from rag_pipeline import retriever, llm
 from hr_graph import build_graph
 
+# ==========================================
+#  APP CONFIG
+# ==========================================
+st.set_page_config(page_title="Office Assistant", layout="centered")
+
 def remove_fading_animations():
     st.markdown("""
         <style>
@@ -1596,6 +1601,16 @@ def remove_fading_animations():
             }
         </style>
     """, unsafe_allow_html=True)
+
+remove_fading_animations()
+
+st.markdown("""
+<style>
+    .stChatMessage.st-emotion-cache-16idsys.eeusbqq4 { flex-direction: row-reverse; text-align: right; }
+    .stButton button { width: 100%; font-weight: bold; }
+    div[data-testid="stToast"] { padding: 1rem; width: 300px; }
+</style>
+""", unsafe_allow_html=True)
 
 # ==========================================
 #  🛠️ CRITICAL: AUTO-SETUP (Self-Healing)
@@ -1651,20 +1666,7 @@ def initialize_system():
 # 🔥 CALL THIS IMMEDIATELY
 initialize_system()
 
-remove_fading_animations()
 
-# ==========================================
-#  APP CONFIG
-# ==========================================
-st.set_page_config(page_title="Office Assistant", layout="centered")
-
-st.markdown("""
-<style>
-    .stChatMessage.st-emotion-cache-16idsys.eeusbqq4 { flex-direction: row-reverse; text-align: right; }
-    .stButton button { width: 100%; font-weight: bold; }
-    div[data-testid="stToast"] { padding: 1rem; width: 300px; }
-</style>
-""", unsafe_allow_html=True)
 
 # --- SESSION STATE ---
 if "user_email" not in st.session_state: st.session_state.user_email = None
