@@ -448,6 +448,7 @@ from models import LeaveRequest, Employee
 from datetime import datetime
 from email_service import send_email
 import re
+import os
 
 APP_LINK = "https://hrms-luca.onrender.com" # Updated to your Render URL
 ADMIN_EMAIL = os.getenv("SENDER_EMAIL")
