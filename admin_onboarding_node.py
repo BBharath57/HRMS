@@ -444,10 +444,8 @@ import random
 from datetime import datetime
 
 def extract_name(message, triggers):
-    # Sort triggers by length so longer phrases are removed first
     sorted_triggers = sorted(triggers, key=len, reverse=True)
-    for t in sorted_triggers: 
-        message = message.replace(t, "")
+    for t in sorted_triggers: message = message.replace(t, "")
     return message.replace(" for ", " ").replace(" of ", " ").replace(" about ", " ").strip()
 
 def admin_onboarding_node(state):
@@ -469,9 +467,7 @@ def admin_onboarding_node(state):
                 emp = db.query(Employee).filter(Employee.id == l.employee_id).first()
                 name = emp.name if emp else "Unknown"
                 days = (l.end_date - l.start_date).days + 1
-                
-                # FIX: Handle potential missing attribute safely
-                l_type = getattr(l, "leave_type", "Unknown")
+                l_type = getattr(l, "leave_type", "Unknown") 
                 msg += f"| **{name}** | {l.start_date.strftime('%Y-%m-%d')} | {l_type.title()} | {days} |\n"
             
             msg += "\n**Actions:**\n- `Approve leave for [Name]`\n- `Reject leave for [Name]`\n- `Approve leaves for all`"
@@ -498,7 +494,6 @@ def admin_onboarding_node(state):
             
             msg = "### ⏳ Onboarding Dashboard\n\n"
             
-            # Ready for Review
             if submitted:
                 msg += "**✅ Details Submitted (Ready to Finalize):**\n"
                 for name in submitted:
@@ -506,7 +501,6 @@ def admin_onboarding_node(state):
             else:
                 msg += "**✅ Details Submitted:** None\n"
 
-            # Pending Action
             if pending:
                 msg += "\n**⚠️ Pending Candidate Action (Need Reminder):**\n"
                 for name in pending:
@@ -583,7 +577,6 @@ _Select a category above to take action._
             new_emp = Employee(name=name, email=email, password=password, role="employee", onboarding_status="onboarding_triggered")
             db.add(new_emp); db.commit()
             
-            # Send Email
             send_email(email, "Welcome to Volta!", f"Hi {name},\n\nYour account has been created.\n\nLogin: {email}\nPass: {password}\n\nPlease login to complete your onboarding.")
             
             state["notification"] = f"✅ Created {name}"
@@ -593,7 +586,7 @@ _Select a category above to take action._
         return state
 
     # =========================================================
-    # 6. SHOW SINGLE DETAILS (FIXED "No Data" Logic)
+    # 6. SHOW SINGLE DETAILS (FIXED: Handles "Waiting" Status)
     # =========================================================
     if any(x in message for x in ["details", "profile", "info", "give", "show"]):
         name_target = extract_name(message, ["show", "give me", "give", "details", "profile", "info", "about"])
@@ -602,7 +595,6 @@ _Select a category above to take action._
              state["messages"].append({"role": "assistant", "content": "📋 Please use **'List all employees'** to see everyone."})
              return state
 
-        # Use ILIKE for case-insensitive search
         user = db.query(Employee).filter(Employee.name.ilike(f"%{name_target}%")).first()
         
         if user:
@@ -616,16 +608,16 @@ _Select a category above to take action._
 - **Role:** {user.role}
 - **Leaves:** Paid ({1-user.used_paid_leaves}), Emergency ({e_left})
 """
-            # CASE B: Waiting for Candidate (Fixes the "No Data" issue)
+            # CASE B: Waiting for Candidate (The Fix!)
             elif user.onboarding_status == "onboarding_triggered":
-                msg = (
+                 msg = (
                     f"👤 **Candidate:** {user.name}\n"
-                    f"🔄 **Status:** {user.onboarding_status}\n\n" # here is the code that should be updataed
+                    f"🔄 **Status:** Waiting for Candidate\n\n"
                     f"⚠️ **Note:** {user.name} has NOT submitted their form yet.\n"
                     f"You can type **'Remind {user.name}'** to send them an email."
                 )
 
-            # CASE C: Candidate Submitted Data
+            # CASE C: Submitted Candidates
             else:
                 onboard_rec = db.query(Onboarding).filter(Onboarding.employee_id == user.id).first()
                 details = onboard_rec.data if onboard_rec else "No data found."
@@ -664,9 +656,7 @@ _Select a category above to take action._
             user.employee_id_str = new_id
             user.onboarding_status = "active"
             db.commit()
-            
             send_email(user.email, f"Welcome to Volta! (ID: {new_id})", f"Hi {user.name},\n\nCongratulations! Your onboarding is complete.\nYour Employee ID is {new_id}.\n\nPlease REFRESH your portal to access the Employee Chat.")
-            
             state["messages"].append({"role": "assistant", "content": f"✅ **{user.name}** is now Active (ID: `{new_id}`).\n📧 Welcome email sent."})
         elif user:
              state["messages"].append({"role": "assistant", "content": f"⚠️ {user.name} is not ready (Status: {user.onboarding_status})."})
