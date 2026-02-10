@@ -444,8 +444,10 @@ import random
 from datetime import datetime
 
 def extract_name(message, triggers):
+    # Sort triggers by length so longer phrases are removed first
     sorted_triggers = sorted(triggers, key=len, reverse=True)
-    for t in sorted_triggers: message = message.replace(t, "")
+    for t in sorted_triggers: 
+        message = message.replace(t, "")
     return message.replace(" for ", " ").replace(" of ", " ").replace(" about ", " ").strip()
 
 def admin_onboarding_node(state):
@@ -467,8 +469,9 @@ def admin_onboarding_node(state):
                 emp = db.query(Employee).filter(Employee.id == l.employee_id).first()
                 name = emp.name if emp else "Unknown"
                 days = (l.end_date - l.start_date).days + 1
-                # FIX: Ensure we use leave_type
-                l_type = getattr(l, "leave_type", "Unknown") 
+                
+                # FIX: Handle potential missing attribute safely
+                l_type = getattr(l, "leave_type", "Unknown")
                 msg += f"| **{name}** | {l.start_date.strftime('%Y-%m-%d')} | {l_type.title()} | {days} |\n"
             
             msg += "\n**Actions:**\n- `Approve leave for [Name]`\n- `Reject leave for [Name]`\n- `Approve leaves for all`"
@@ -479,7 +482,6 @@ def admin_onboarding_node(state):
     # 2. SPECIFIC DASHBOARD: ONBOARDING
     # =========================================================
     if "onboarding" in message and ("show" in message or "requests" in message or "list" in message):
-        # Fetch all non-active employees (candidates)
         candidates = db.query(Employee).filter(Employee.onboarding_status != "active").all()
         
         if not candidates:
@@ -496,7 +498,7 @@ def admin_onboarding_node(state):
             
             msg = "### ⏳ Onboarding Dashboard\n\n"
             
-            # Section A: Ready for Review
+            # Ready for Review
             if submitted:
                 msg += "**✅ Details Submitted (Ready to Finalize):**\n"
                 for name in submitted:
@@ -504,7 +506,7 @@ def admin_onboarding_node(state):
             else:
                 msg += "**✅ Details Submitted:** None\n"
 
-            # Section B: Pending Action from User
+            # Pending Action
             if pending:
                 msg += "\n**⚠️ Pending Candidate Action (Need Reminder):**\n"
                 for name in pending:
@@ -591,7 +593,7 @@ _Select a category above to take action._
         return state
 
     # =========================================================
-    # 6. SHOW SINGLE DETAILS (FIXED: "No Data" Bug)
+    # 6. SHOW SINGLE DETAILS (FIXED "No Data" Logic)
     # =========================================================
     if any(x in message for x in ["details", "profile", "info", "give", "show"]):
         name_target = extract_name(message, ["show", "give me", "give", "details", "profile", "info", "about"])
@@ -604,7 +606,7 @@ _Select a category above to take action._
         user = db.query(Employee).filter(Employee.name.ilike(f"%{name_target}%")).first()
         
         if user:
-            # A. ACTIVE EMPLOYEES
+            # CASE A: Active Employee
             if user.onboarding_status == "active":
                 e_left = max(0, 1 - user.used_emergency_leaves)
                 msg = f"""
@@ -614,16 +616,16 @@ _Select a category above to take action._
 - **Role:** {user.role}
 - **Leaves:** Paid ({1-user.used_paid_leaves}), Emergency ({e_left})
 """
-            # B. PENDING CANDIDATES (The Fix!)
+            # CASE B: Waiting for Candidate (Fixes the "No Data" issue)
             elif user.onboarding_status == "onboarding_triggered":
-                 msg = (
+                msg = (
                     f"👤 **Candidate:** {user.name}\n"
-                    f"🔄 **Status:** Waiting for Candidate\n\n"
+                    f"🔄 **Status:** {user.onboarding_status}\n\n"
                     f"⚠️ **Note:** {user.name} has NOT submitted their form yet.\n"
                     f"You can type **'Remind {user.name}'** to send them an email."
                 )
 
-            # C. SUBMITTED CANDIDATES
+            # CASE C: Candidate Submitted Data
             else:
                 onboard_rec = db.query(Onboarding).filter(Onboarding.employee_id == user.id).first()
                 details = onboard_rec.data if onboard_rec else "No data found."
@@ -653,7 +655,6 @@ _Select a category above to take action._
             state["messages"].append({"role": "assistant", "content": f"⚠️ User '{name_target}' not found."})
         return state
 
-    # FINALIZE COMMAND
     if "finalize" in message:
         name_target = extract_name(message, ["finalize", "approve"])
         user = db.query(Employee).filter(Employee.name.ilike(f"%{name_target}%")).first()
