@@ -1555,6 +1555,55 @@ import sys
 import time
 from sqlalchemy import desc, inspect
 
+# ==========================================
+# 1. APP CONFIG (MUST BE FIRST)
+# ==========================================
+st.set_page_config(page_title="Office Assistant", layout="centered")
+
+# ==========================================
+# 2. INSTANT UI CSS (MUST BE SECOND)
+# ==========================================
+def remove_fading_animations():
+    st.markdown("""
+        <style>
+            /* 🛑 GLOBAL STOP: Kill all standard transitions */
+            .stApp {
+                transition: none !important;
+                animation: none !important;
+            }
+            
+            /* 🛑 FORCE OPACITY: Prevent the "Graying Out" effect */
+            div[data-testid="stAppViewContainer"],
+            div[data-testid="stMainBlockContainer"],
+            div[data-testid="stVerticalBlock"] {
+                opacity: 1 !important;
+                transition: none !important;
+                filter: none !important;
+                transform: none !important;
+            }
+            
+            /* 🛑 HIDE SPINNERS: Remove the top-right running man/spinner */
+            div[data-testid="stStatusWidget"] {
+                display: none !important;
+                visibility: hidden !important;
+            }
+            
+            /* 🛑 INPUTS: Stop inputs from fading when you hit enter */
+            .stTextInput, .stChatInput, .stButton {
+                opacity: 1 !important;
+                transition: none !important;
+            }
+            
+            /* 🛑 IFRAME/COMPONENTS: Stop flickering on load */
+            iframe {
+                transition: none !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+# ⚡ EXECUTE CSS IMMEDIATELY (Before DB Connection)
+remove_fading_animations()
+
 # --- PATH SETUP ---
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
@@ -1562,48 +1611,53 @@ sys.path.insert(0, parent_dir)
 
 # --- IMPORTS ---
 from db import get_db, engine, Base, SessionLocal
-# We delay importing models slightly to ensure Base is ready, 
-# but we MUST import them for create_all to work.
 import models 
 from models import Employee, Onboarding, LeaveRequest
 from rag_pipeline import retriever, llm
 from hr_graph import build_graph
 
 # ==========================================
-#  APP CONFIG
+# 3. ⚡ CACHED DATABASE SETUP (THE FIX)
 # ==========================================
-st.set_page_config(page_title="Office Assistant", layout="centered")
+# 👇 This decorator stops it from running every time!
+@st.cache_resource 
+def initialize_system():
+    """Forces table creation and Admin user generation on startup."""
+    print("⚡ INITIALIZING DATABASE SYSTEM (Running Once)...")
+    try:
+        # 1. Force Create All Tables
+        Base.metadata.create_all(bind=engine)
+        
+        # 2. Create Admin User
+        db = SessionLocal()
+        admin_email = os.getenv("SENDER_EMAIL") 
+        
+        # Only query if admin_email is set
+        if admin_email:
+            existing_admin = db.query(Employee).filter(Employee.email == admin_email).first()
+            if not existing_admin:
+                admin = Employee(
+                    name="Bharath Admin",
+                    email=admin_email,
+                    password="Admin", 
+                    role="admin",
+                    onboarding_status="active"
+                )
+                db.add(admin)
+                db.commit()
+                print(f"✅ ADMIN USER CREATED: {admin_email}")
+            else:
+                print("✅ Admin user already exists.")
+        db.close()
+    except Exception as e:
+        print(f"⚠️ SETUP EXCEPTION: {e}")
 
-def remove_fading_animations():
-    st.markdown("""
-        <style>
-            /* 1. Stop the "Graying Out" / Fading effect during processing */
-            .stApp {
-                transition: none !important;
-            }
-            
-            /* Target the main container to prevent opacity drops */
-            div[data-testid="stAppViewContainer"] {
-                opacity: 1 !important;
-                transition: none !important;
-                filter: none !important;
-            }
-            
-            /* 2. Hide the 'Running' spinner in the top right (Optional - makes it feel faster) */
-            div[data-testid="stStatusWidget"] {
-                visibility: hidden;
-            }
-            
-            /* 3. Force all elements to appear instantly without sliding/fading */
-            .element-container, .stMarkdown, .stButton, .stTextInput {
-                transition: none !important;
-                animation: none !important;
-            }
-        </style>
-    """, unsafe_allow_html=True)
+# Call the cached function
+initialize_system()
 
-remove_fading_animations()
-
+# ==========================================
+# 4. CUSTOM STYLES
+# ==========================================
 st.markdown("""
 <style>
     .stChatMessage.st-emotion-cache-16idsys.eeusbqq4 { flex-direction: row-reverse; text-align: right; }
@@ -1611,62 +1665,6 @@ st.markdown("""
     div[data-testid="stToast"] { padding: 1rem; width: 300px; }
 </style>
 """, unsafe_allow_html=True)
-
-# ==========================================
-#  🛠️ CRITICAL: AUTO-SETUP (Self-Healing)
-# ==========================================
-def initialize_system():
-    """Forces table creation and Admin user generation on startup."""
-    print("⚡ INITIALIZING DATABASE SYSTEM...")
-    try:
-        # 1. DEBUG: Check if models are registered
-        print(f"🔍 DEBUG: Tables found in metadata: {list(Base.metadata.tables.keys())}")
-        
-        if not Base.metadata.tables:
-            print("⚠️ CRITICAL WARNING: No tables found in metadata! Models might not be imported correctly.")
-
-        # 2. Force Create All Tables
-        Base.metadata.create_all(bind=engine)
-        print("✅ TABLES CREATION STEP COMPLETED")
-        
-        # 3. Verify Creation using Inspector
-        inspector = inspect(engine)
-        existing_tables = inspector.get_table_names()
-        print(f"🔍 DEBUG: Tables actually in DB: {existing_tables}")
-
-        if "employees" not in existing_tables:
-            print("❌ ERROR: 'employees' table still missing after creation attempt.")
-            return
-
-        # 4. Create Admin User
-        db = SessionLocal()
-        admin_email = os.getenv("SENDER_EMAIL") # <--- YOUR EMAIL
-        
-        # Now it is safe to query because we verified the table exists
-        existing_admin = db.query(Employee).filter(Employee.email == admin_email).first()
-        
-        if not existing_admin:
-            admin = Employee(
-                name="Bharath Admin",
-                email=admin_email,
-                password="Admin", 
-                role="admin",
-                onboarding_status="active"
-            )
-            db.add(admin)
-            db.commit()
-            print(f"✅ ADMIN USER CREATED: {admin_email}")
-        else:
-            print("✅ Admin user already exists.")
-        
-        db.close()
-    except Exception as e:
-        print(f"⚠️ SETUP EXCEPTION: {e}")
-
-# 🔥 CALL THIS IMMEDIATELY
-initialize_system()
-
-
 
 # --- SESSION STATE ---
 if "user_email" not in st.session_state: st.session_state.user_email = None
@@ -1689,12 +1687,11 @@ if st.session_state.user_email is None:
     st.info("Log in with your Admin credentials.")
     
     with st.container():
-        email = st.text_input("Email", key="login_email").strip().lower()
-        password = st.text_input("Password", type="password", key="login_pass")
-        
-        if st.button("Login", type="primary"):
-            # Use a fresh session for login
-            try:
+        # Added on_change logic to make Enter key work smoother
+        def attempt_login():
+             email = st.session_state.login_email.strip().lower()
+             password = st.session_state.login_pass
+             try:
                 login_db = SessionLocal()
                 user = login_db.query(Employee).filter(Employee.email == email, Employee.password == password).first()
                 login_db.close()
@@ -1703,12 +1700,18 @@ if st.session_state.user_email is None:
                     st.session_state.user_email = user.email
                     st.session_state.role = user.role
                     st.session_state.notification_checked = False 
-                    st.rerun()
                 else:
                     st.error("❌ Invalid Credentials.")
-            except Exception as e:
+             except Exception as e:
                 st.error(f"Login Error: {e}")
 
+        st.text_input("Email", key="login_email")
+        st.text_input("Password", type="password", key="login_pass", on_change=attempt_login)
+        
+        if st.button("Login", type="primary"):
+            attempt_login()
+            if st.session_state.user_email:
+                st.rerun()
 
 # ==========================================
 #      MAIN INTERFACE
@@ -1725,10 +1728,9 @@ else:
         user_obj = db.query(Employee).filter(Employee.email == user_email).first()
 
         # 🛡️ AUTO-REFRESH FIX: 
-        # If DB says "active" but Session thought "details_submitted", RERUN immediately.
         if user_obj and user_obj.onboarding_status == "active" and st.session_state.get("last_status") != "active":
              st.session_state["last_status"] = "active"
-             st.rerun() # <--- This forces the page to reload and show the Chat Interface
+             st.rerun() 
 
         display_name = user_obj.name if user_obj else user_email
         
@@ -1760,7 +1762,7 @@ else:
         # =========================================================
         #  🔄 NOTIFICATION LOGIC
         # =========================================================
-        @st.fragment
+        @st.fragment(run_every=3)
         def poll_notifications():
             if not st.session_state.user_email: return
             local_db = SessionLocal()
@@ -1782,16 +1784,16 @@ else:
                             msg = "👋 **Welcome Admin!** All systems operational. No pending requests."
 
                         current_session["messages"].append({"role": "assistant", "content": msg})
-                        # time.sleep(1)
-                        # st.rerun()
+                        time.sleep(1)
+                        st.rerun()
 
                     elif current_total > last_total:
                         st.session_state.last_notif_check["admin_pending_count"] = current_total 
                         new_count = current_total - last_total
                         st.toast(f"🔔 {new_count} New Request(s)!", icon="🔔")
                         current_session["messages"].append({"role": "assistant", "content": f"🔔 **New Request Received!**\nTotal Pending: {current_total}\nType **'show pending requests'**."})
-                        # time.sleep(2)
-                        # st.rerun()
+                        time.sleep(2)
+                        st.rerun()
                     
                     if current_total != last_total:
                         st.session_state.last_notif_check["admin_pending_count"] = current_total
@@ -1814,8 +1816,8 @@ else:
                             msg = f"👋 **Hi {user_obj.name}!** I'm ready to solve your queries."
                         
                         current_session["messages"].append({"role": "assistant", "content": msg})
-                        # time.sleep(1)
-                        # st.rerun()
+                        time.sleep(1)
+                        st.rerun()
 
                     elif last_leave and last_leave.status in ["approved", "rejected"]:
                         last_leave.notification_seen = True
@@ -1824,8 +1826,8 @@ else:
                         msg = f"{icon} **Update:** Your leave for **{last_leave.start_date.date()}** was **{last_leave.status.upper()}**."
                         st.toast(f"Leave {last_leave.status.title()}!", icon=icon)
                         current_session["messages"].append({"role": "assistant", "content": msg})
-                        # time.sleep(2)
-                        # st.rerun()
+                        time.sleep(2)
+                        st.rerun()
             finally:
                 local_db.close()
 
