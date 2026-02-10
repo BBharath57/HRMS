@@ -467,9 +467,9 @@ def admin_onboarding_node(state):
                 emp = db.query(Employee).filter(Employee.id == l.employee_id).first()
                 name = emp.name if emp else "Unknown"
                 days = (l.end_date - l.start_date).days + 1
-
-                # 👇 FIX IS HERE: Changed l.type to l.leave_type
-                msg += f"| **{name}** | {l.start_date.strftime('%Y-%m-%d')} | {l.leave_type.title()} | {days} |\n"
+                # FIX: Ensure we use leave_type
+                l_type = getattr(l, "leave_type", "Unknown") 
+                msg += f"| **{name}** | {l.start_date.strftime('%Y-%m-%d')} | {l_type.title()} | {days} |\n"
             
             msg += "\n**Actions:**\n- `Approve leave for [Name]`\n- `Reject leave for [Name]`\n- `Approve leaves for all`"
             state["messages"].append({"role": "assistant", "content": msg})
@@ -591,7 +591,7 @@ _Select a category above to take action._
         return state
 
     # =========================================================
-    # 6. SHOW SINGLE DETAILS
+    # 6. SHOW SINGLE DETAILS (FIXED: "No Data" Bug)
     # =========================================================
     if any(x in message for x in ["details", "profile", "info", "give", "show"]):
         name_target = extract_name(message, ["show", "give me", "give", "details", "profile", "info", "about"])
@@ -600,9 +600,11 @@ _Select a category above to take action._
              state["messages"].append({"role": "assistant", "content": "📋 Please use **'List all employees'** to see everyone."})
              return state
 
+        # Use ILIKE for case-insensitive search
         user = db.query(Employee).filter(Employee.name.ilike(f"%{name_target}%")).first()
         
         if user:
+            # A. ACTIVE EMPLOYEES
             if user.onboarding_status == "active":
                 e_left = max(0, 1 - user.used_emergency_leaves)
                 msg = f"""
@@ -612,10 +614,20 @@ _Select a category above to take action._
 - **Role:** {user.role}
 - **Leaves:** Paid ({1-user.used_paid_leaves}), Emergency ({e_left})
 """
+            # B. PENDING CANDIDATES (The Fix!)
+            elif user.onboarding_status == "onboarding_triggered":
+                 msg = (
+                    f"👤 **Candidate:** {user.name}\n"
+                    f"🔄 **Status:** Waiting for Candidate\n\n"
+                    f"⚠️ **Note:** {user.name} has NOT submitted their form yet.\n"
+                    f"You can type **'Remind {user.name}'** to send them an email."
+                )
+
+            # C. SUBMITTED CANDIDATES
             else:
                 onboard_rec = db.query(Onboarding).filter(Onboarding.employee_id == user.id).first()
-                details = onboard_rec.data if onboard_rec else "No data"
-                msg = f"👤 **Candidate:** {user.name}\nStatus: {user.onboarding_status}\n\n**Data:**\n{details}"
+                details = onboard_rec.data if onboard_rec else "No data found."
+                msg = f"👤 **Candidate:** {user.name}\n**Status:** {user.onboarding_status}\n\n**Data:**\n{details}\n\n**Actions:**\n- `Finalize {user.name}`\n- `Reject {user.name}`"
                 
             state["messages"].append({"role": "assistant", "content": msg})
         else:
@@ -627,11 +639,9 @@ _Select a category above to take action._
     # =========================================================
     if "remind" in message:
         name_target = extract_name(message, ["remind", "send reminder", "reminder"])
-        # Fix: Search loosely for the name
         user = db.query(Employee).filter(Employee.name.ilike(f"%{name_target}%")).first()
         
         if user:
-            # Check if they actually need a reminder
             if user.onboarding_status in ["onboarding_triggered", "details_submitted"]:
                 send_email(user.email, "Action Required: Complete Onboarding", f"Hi {user.name},\n\nPlease login to complete your onboarding.")
                 state["messages"].append({"role": "assistant", "content": f"✅ Reminder sent to **{user.name}**."})
@@ -643,7 +653,7 @@ _Select a category above to take action._
             state["messages"].append({"role": "assistant", "content": f"⚠️ User '{name_target}' not found."})
         return state
 
-    # 2. FINALIZE COMMAND
+    # FINALIZE COMMAND
     if "finalize" in message:
         name_target = extract_name(message, ["finalize", "approve"])
         user = db.query(Employee).filter(Employee.name.ilike(f"%{name_target}%")).first()
@@ -654,7 +664,6 @@ _Select a category above to take action._
             user.onboarding_status = "active"
             db.commit()
             
-            # Emails
             send_email(user.email, f"Welcome to Volta! (ID: {new_id})", f"Hi {user.name},\n\nCongratulations! Your onboarding is complete.\nYour Employee ID is {new_id}.\n\nPlease REFRESH your portal to access the Employee Chat.")
             
             state["messages"].append({"role": "assistant", "content": f"✅ **{user.name}** is now Active (ID: `{new_id}`).\n📧 Welcome email sent."})

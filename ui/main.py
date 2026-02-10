@@ -1566,37 +1566,38 @@ st.set_page_config(page_title="Office Assistant", layout="centered")
 def remove_fading_animations():
     st.markdown("""
         <style>
-            /* 🛑 GLOBAL STOP: Kill all standard transitions */
+            /* 1. Global Stop for Main Container Fading */
             .stApp {
                 transition: none !important;
                 animation: none !important;
             }
             
-            /* 🛑 FORCE OPACITY: Prevent the "Graying Out" effect */
-            div[data-testid="stAppViewContainer"],
-            div[data-testid="stMainBlockContainer"],
-            div[data-testid="stVerticalBlock"] {
+            /* 2. Prevent the whole page from dimming/graying out */
+            div[data-testid="stAppViewContainer"], div[data-testid="stMainBlockContainer"] {
                 opacity: 1 !important;
-                transition: none !important;
                 filter: none !important;
-                transform: none !important;
+                transition: none !important;
             }
             
-            /* 🛑 HIDE SPINNERS: Remove the top-right running man/spinner */
+            /* 3. CRITICAL FIX: Stop the Input Box from graying out/blinking */
+            /* This targets the specific text area when Streamlit disables it */
+            textarea[disabled], input[disabled] {
+                opacity: 1 !important;
+                background-color: transparent !important;
+                color: inherit !important;
+                -webkit-text-fill-color: inherit !important;
+                cursor: default !important;
+                border-color: rgba(250, 250, 250, 0.2) !important; /* Keep border visible */
+            }
+            
+            /* 4. Hide the small "Running" spinner in top right */
             div[data-testid="stStatusWidget"] {
-                display: none !important;
                 visibility: hidden !important;
             }
             
-            /* 🛑 INPUTS: Stop inputs from fading when you hit enter */
-            .stTextInput, .stChatInput, .stButton {
-                opacity: 1 !important;
-                transition: none !important;
-            }
-            
-            /* 🛑 IFRAME/COMPONENTS: Stop flickering on load */
-            iframe {
-                transition: none !important;
+            /* 5. Remove the "skeleton" loading animation if it appears */
+            .stSkeleton {
+                display: none !important;
             }
         </style>
     """, unsafe_allow_html=True)
