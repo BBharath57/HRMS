@@ -1684,35 +1684,45 @@ if "last_notif_check" not in st.session_state:
 #      LOGIN SCREEN
 # ==========================================
 if st.session_state.user_email is None:
-    st.title("🏢 VOLTA HR Portal")
-    st.info("Log in with your Admin credentials.")
+    # 1. Create a placeholder that holds the ENTIRE login UI
+    login_holder = st.empty()
     
-    with st.container():
-        # Added on_change logic to make Enter key work smoother
-        def attempt_login():
-             email = st.session_state.login_email.strip().lower()
-             password = st.session_state.login_pass
-             try:
+    with login_holder.container():
+        st.title("🏢 VOLTA HR Portal")
+        st.info("Log in with your Admin credentials.")
+        
+        # We use a form so 'Enter' key submits automatically
+        with st.form("login_form"):
+            email_input = st.text_input("Email", key="login_email").strip().lower()
+            pass_input = st.text_input("Password", type="password", key="login_pass")
+            submit_btn = st.form_submit_button("Login", type="primary")
+        
+        if submit_btn:
+            try:
                 login_db = SessionLocal()
-                user = login_db.query(Employee).filter(Employee.email == email, Employee.password == password).first()
+                user = login_db.query(Employee).filter(Employee.email == email_input, Employee.password == pass_input).first()
                 login_db.close()
                 
                 if user:
+                    # ✅ SUCCESS!
+                    
+                    # 1. Clear the Login Screen INSTANTLY
+                    login_holder.empty()
+                    
+                    # 2. Show a temporary "Loading" message so screen isn't just blank
+                    st.success(f"✅ Welcome back, {user.name}! Loading dashboard...")
+                    
+                    # 3. Set Session State
                     st.session_state.user_email = user.email
                     st.session_state.role = user.role
                     st.session_state.notification_checked = False 
+                    
+                    # 4. Rerun immediately
+                    st.rerun()
                 else:
                     st.error("❌ Invalid Credentials.")
-             except Exception as e:
+            except Exception as e:
                 st.error(f"Login Error: {e}")
-
-        st.text_input("Email", key="login_email")
-        st.text_input("Password", type="password", key="login_pass", on_change=attempt_login)
-        
-        if st.button("Login", type="primary"):
-            attempt_login()
-            if st.session_state.user_email:
-                st.rerun()
 
 # ==========================================
 #      MAIN INTERFACE
