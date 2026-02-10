@@ -1583,7 +1583,7 @@ def remove_fading_animations():
                 transition: none !important;
             }
             
-            /* 3. Fix input boxes (from your original code) */
+            /* 3. Fix input boxes */
             textarea[disabled], input[disabled] {
                 opacity: 1 !important;
                 background-color: transparent !important;
@@ -1609,6 +1609,30 @@ def remove_fading_animations():
             @keyframes fadeIn {
                 from { opacity: 1; }
                 to { opacity: 1; }
+            }
+            
+            /* 7. NUCLEAR OPTION - Kill ALL transitions */
+            * {
+                -webkit-transition: none !important;
+                -moz-transition: none !important;
+                -o-transition: none !important;
+                transition: none !important;
+            }
+            
+            /* 8. Force instant opacity */
+            .stApp > div {
+                opacity: 1 !important;
+            }
+            
+            /* 9. Prevent container fading */
+            .block-container {
+                opacity: 1 !important;
+                transition: none !important;
+            }
+            
+            /* 10. Override rerun animation */
+            .stApp[data-test-script-state="running"] {
+                opacity: 1 !important;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -1692,45 +1716,56 @@ if "last_notif_check" not in st.session_state:
     }
 
 # ==========================================
-#      LOGIN SCREEN (OPTIMIZED - INSTANT)
+#      LOGIN SCREEN (ZERO-FADE VERSION)
 # ==========================================
 if st.session_state.user_email is None:
     
-    st.title("🏢 VOLTA HR Portal")
-    st.info("Log in with your Admin credentials.")
+    # Create a container that we can completely replace
+    login_container = st.container()
     
-    with st.form("login_form"):
-        email_input = st.text_input("Email")
-        password_input = st.text_input("Password", type="password")
+    with login_container:
+        st.title("🏢 VOLTA HR Portal")
+        st.info("Log in with your Admin credentials.")
         
-        submitted = st.form_submit_button("Login", type="primary")
-        
-        if submitted:
-            # Instant verification - no intermediate states
-            email = email_input.strip().lower()
-            password = password_input
+        with st.form("login_form", clear_on_submit=True):
+            email_input = st.text_input("Email", key="login_email")
+            password_input = st.text_input("Password", type="password", key="login_pass")
             
-            if email and password:
-                try:
-                    login_db = SessionLocal()
-                    user = login_db.query(Employee).filter(
-                        Employee.email == email, 
-                        Employee.password == password
-                    ).first()
-                    login_db.close()
-                    
-                    if user:
-                        # Directly set session state and rerun
-                        st.session_state.user_email = user.email
-                        st.session_state.role = user.role
-                        st.session_state.notification_checked = False
-                        st.rerun()
-                    else:
-                        st.error("❌ Invalid Credentials. Please try again.")
-                except Exception as e:
-                    st.error(f"❌ Connection Error: {e}")
-            else:
-                st.warning("⚠️ Please enter both email and password.")
+            submitted = st.form_submit_button("Login", type="primary")
+            
+            if submitted:
+                email = email_input.strip().lower()
+                password = password_input
+                
+                if email and password:
+                    try:
+                        login_db = SessionLocal()
+                        user = login_db.query(Employee).filter(
+                            Employee.email == email, 
+                            Employee.password == password
+                        ).first()
+                        login_db.close()
+                        
+                        if user:
+                            # Clear the container FIRST
+                            login_container.empty()
+                            
+                            # Then set session state
+                            st.session_state.user_email = user.email
+                            st.session_state.role = user.role
+                            st.session_state.notification_checked = False
+                            
+                            # Force immediate rerun
+                            st.rerun()
+                        else:
+                            st.error("❌ Invalid Credentials. Please try again.")
+                    except Exception as e:
+                        st.error(f"❌ Connection Error: {e}")
+                else:
+                    st.warning("⚠️ Please enter both email and password.")
+    
+    # Stop execution here to prevent any bleeding into main interface
+    st.stop()
 
 # ==========================================
 #      MAIN INTERFACE
