@@ -1572,32 +1572,25 @@ def remove_fading_animations():
                 animation: none !important;
             }
             
-            /* 2. Prevent the whole page from dimming/graying out */
+            /* 2. Prevent the whole page from dimming */
             div[data-testid="stAppViewContainer"], div[data-testid="stMainBlockContainer"] {
                 opacity: 1 !important;
                 filter: none !important;
                 transition: none !important;
             }
             
-            /* 3. CRITICAL FIX: Stop the Input Box from graying out/blinking */
-            /* This targets the specific text area when Streamlit disables it */
+            /* 3. FIX FOR INPUT BOX: Keep it white/active looking */
             textarea[disabled], input[disabled] {
                 opacity: 1 !important;
                 background-color: transparent !important;
                 color: inherit !important;
-                -webkit-text-fill-color: inherit !important;
                 cursor: default !important;
-                border-color: rgba(250, 250, 250, 0.2) !important; /* Keep border visible */
+                border-color: rgba(250, 250, 250, 0.2) !important;
             }
             
-            /* 4. Hide the small "Running" spinner in top right */
-            div[data-testid="stStatusWidget"] {
-                visibility: hidden !important;
-            }
-            
-            /* 5. Remove the "skeleton" loading animation if it appears */
-            .stSkeleton {
-                display: none !important;
+            /* 4. EXCEPTION: Allow the Spinner to Spin! */
+            div[data-testid="stSpinner"] i, div[data-testid="stSpinner"] div {
+                animation: spinner-border 1s linear infinite !important;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -1684,45 +1677,44 @@ if "last_notif_check" not in st.session_state:
 #      LOGIN SCREEN
 # ==========================================
 if st.session_state.user_email is None:
-    # 1. Create a placeholder that holds the ENTIRE login UI
+    # 1. Create a placeholder for the Login UI
     login_holder = st.empty()
     
     with login_holder.container():
         st.title("🏢 VOLTA HR Portal")
-        st.info("Log in with your Admin credentials.")
+        st.info("Log in with your credentials.")
         
-        # We use a form so 'Enter' key submits automatically
         with st.form("login_form"):
             email_input = st.text_input("Email", key="login_email").strip().lower()
             pass_input = st.text_input("Password", type="password", key="login_pass")
             submit_btn = st.form_submit_button("Login", type="primary")
         
         if submit_btn:
-            try:
-                login_db = SessionLocal()
-                user = login_db.query(Employee).filter(Employee.email == email_input, Employee.password == pass_input).first()
-                login_db.close()
-                
-                if user:
-                    # ✅ SUCCESS!
+            # 🚀 VISUAL FEEDBACK: Shows "Verifying..." immediately on click
+            with st.spinner("🔄 Verifying credentials..."):
+                try:
+                    login_db = SessionLocal()
+                    user = login_db.query(Employee).filter(Employee.email == email_input, Employee.password == pass_input).first()
+                    login_db.close()
                     
-                    # 1. Clear the Login Screen INSTANTLY
-                    login_holder.empty()
-                    
-                    # 2. Show a temporary "Loading" message so screen isn't just blank
-                    st.success(f"✅ Welcome back, {user.name}! Loading dashboard...")
-                    
-                    # 3. Set Session State
-                    st.session_state.user_email = user.email
-                    st.session_state.role = user.role
-                    st.session_state.notification_checked = False 
-                    
-                    # 4. Rerun immediately
-                    st.rerun()
-                else:
-                    st.error("❌ Invalid Credentials.")
-            except Exception as e:
-                st.error(f"Login Error: {e}")
+                    if user:
+                        # ✅ SUCCESS:
+                        # 1. Clear the Login Form IMMEDIATELY
+                        login_holder.empty()
+                        
+                        # 2. Set Session State
+                        st.session_state.user_email = user.email
+                        st.session_state.role = user.role
+                        st.session_state.notification_checked = False 
+                        
+                        # 3. Show Success & Rerun
+                        st.success(f"✅ Welcome, {user.name}!")
+                        time.sleep(0.1) # Tiny pause to let the user see the checkmark
+                        st.rerun()
+                    else:
+                        st.error("❌ Invalid Credentials.")
+                except Exception as e:
+                    st.error(f"Login Error: {e}")
 
 # ==========================================
 #      MAIN INTERFACE
