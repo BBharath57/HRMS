@@ -1566,19 +1566,24 @@ st.set_page_config(page_title="Office Assistant", layout="centered")
 def remove_fading_animations():
     st.markdown("""
         <style>
-            /* 1. Global Stop for Animations */
-            .stApp {
+            /* 1. FORCE INSTANT TRANSITIONS - No Fading */
+            .stApp, .stApp * {
                 transition: none !important;
                 animation: none !important;
+                animation-duration: 0s !important;
+                transition-duration: 0s !important;
             }
             
-            /* 2. Prevent the whole page from dimming */
-            div[data-testid="stAppViewContainer"], div[data-testid="stMainBlockContainer"] {
+            /* 2. Stop page dimming during reruns */
+            div[data-testid="stAppViewContainer"], 
+            div[data-testid="stMainBlockContainer"],
+            div[data-testid="stMain"] {
                 opacity: 1 !important;
                 filter: none !important;
+                transition: none !important;
             }
             
-            /* 3. FIX FOR INPUT BOX (Video Issue) */
+            /* 3. Fix input boxes (from your original code) */
             textarea[disabled], input[disabled] {
                 opacity: 1 !important;
                 background-color: transparent !important;
@@ -1587,11 +1592,23 @@ def remove_fading_animations():
                 border-color: rgba(250, 250, 250, 0.2) !important;
             }
             
-            /* 4. IMPORTANT: Ensure Info/Success alerts are VISIBLE */
+            /* 4. Ensure alerts/messages are visible */
             div[data-testid="stAlert"] {
                 visibility: visible !important;
                 opacity: 1 !important;
                 display: flex !important;
+            }
+            
+            /* 5. CRITICAL: Force immediate visibility changes */
+            .element-container, .stMarkdown, .stForm {
+                transition: none !important;
+                animation: none !important;
+            }
+            
+            /* 6. Stop Streamlit's default fade-in effect */
+            @keyframes fadeIn {
+                from { opacity: 1; }
+                to { opacity: 1; }
             }
         </style>
     """, unsafe_allow_html=True)
