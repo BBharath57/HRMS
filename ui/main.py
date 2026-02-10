@@ -1566,7 +1566,7 @@ st.set_page_config(page_title="Office Assistant", layout="centered")
 def remove_fading_animations():
     st.markdown("""
         <style>
-            /* 1. Global Stop for Main Container Fading */
+            /* 1. Global Stop for Animations */
             .stApp {
                 transition: none !important;
                 animation: none !important;
@@ -1576,10 +1576,9 @@ def remove_fading_animations():
             div[data-testid="stAppViewContainer"], div[data-testid="stMainBlockContainer"] {
                 opacity: 1 !important;
                 filter: none !important;
-                transition: none !important;
             }
             
-            /* 3. FIX FOR INPUT BOX: Keep it white/active looking */
+            /* 3. FIX FOR INPUT BOX (Video Issue) */
             textarea[disabled], input[disabled] {
                 opacity: 1 !important;
                 background-color: transparent !important;
@@ -1588,9 +1587,11 @@ def remove_fading_animations():
                 border-color: rgba(250, 250, 250, 0.2) !important;
             }
             
-            /* 4. EXCEPTION: Allow the Spinner to Spin! */
-            div[data-testid="stSpinner"] i, div[data-testid="stSpinner"] div {
-                animation: spinner-border 1s linear infinite !important;
+            /* 4. IMPORTANT: Ensure Info/Success alerts are VISIBLE */
+            div[data-testid="stAlert"] {
+                visibility: visible !important;
+                opacity: 1 !important;
+                display: flex !important;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -1674,47 +1675,67 @@ if "last_notif_check" not in st.session_state:
     }
 
 # ==========================================
-#      LOGIN SCREEN
+#      LOGIN SCREEN (OPTIMIZED)
 # ==========================================
 if st.session_state.user_email is None:
-    # 1. Create a placeholder for the Login UI
-    login_holder = st.empty()
     
-    with login_holder.container():
-        st.title("🏢 VOLTA HR Portal")
-        st.info("Log in with your credentials.")
-        
-        with st.form("login_form"):
-            email_input = st.text_input("Email", key="login_email").strip().lower()
-            pass_input = st.text_input("Password", type="password", key="login_pass")
-            submit_btn = st.form_submit_button("Login", type="primary")
-        
-        if submit_btn:
-            # 🚀 VISUAL FEEDBACK: Shows "Verifying..." immediately on click
-            with st.spinner("🔄 Verifying credentials..."):
-                try:
-                    login_db = SessionLocal()
-                    user = login_db.query(Employee).filter(Employee.email == email_input, Employee.password == pass_input).first()
-                    login_db.close()
-                    
-                    if user:
-                        # ✅ SUCCESS:
-                        # 1. Clear the Login Form IMMEDIATELY
-                        login_holder.empty()
-                        
-                        # 2. Set Session State
-                        st.session_state.user_email = user.email
-                        st.session_state.role = user.role
-                        st.session_state.notification_checked = False 
-                        
-                        # 3. Show Success & Rerun
-                        st.success(f"✅ Welcome, {user.name}!")
-                        time.sleep(0.1) # Tiny pause to let the user see the checkmark
-                        st.rerun()
-                    else:
-                        st.error("❌ Invalid Credentials.")
-                except Exception as e:
-                    st.error(f"Login Error: {e}")
+    # 1. Initialize a "Logging In" state if it doesn't exist
+    if "is_logging_in" not in st.session_state:
+        st.session_state.is_logging_in = False
+
+    # 2. Define the container
+    login_placeholder = st.empty()
+
+    # 3. LOGIC: Choose what to show
+    if st.session_state.is_logging_in:
+        # A. SHOW SPINNER (Form is already gone)
+        with login_placeholder.container():
+            st.info("🔄 Verifying credentials... please wait.")
+            
+            # Perform the heavy DB connection here
+            try:
+                login_db = SessionLocal()
+                # Use st.session_state values tracked from the inputs
+                email = st.session_state.get("login_email_input", "").strip().lower()
+                password = st.session_state.get("login_pass_input", "")
+                
+                user = login_db.query(Employee).filter(Employee.email == email, Employee.password == password).first()
+                login_db.close()
+                
+                if user:
+                    st.success(f"✅ Welcome, {user.name}!")
+                    st.session_state.user_email = user.email
+                    st.session_state.role = user.role
+                    st.session_state.notification_checked = False
+                    st.session_state.is_logging_in = False # Reset state
+                    time.sleep(0.5) 
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid Credentials. Please try again.")
+                    st.session_state.is_logging_in = False # Reset state to show form again
+                    time.sleep(2)
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Connection Error: {e}")
+                st.session_state.is_logging_in = False
+                st.button("Try Again")
+
+    else:
+        # B. SHOW FORM (Default State)
+        with login_placeholder.container():
+            st.title("🏢 VOLTA HR Portal")
+            st.info("Log in with your Admin credentials.")
+            
+            with st.form("login_form"):
+                # Notice we use key='...' to save inputs to session_state automatically
+                st.text_input("Email", key="login_email_input")
+                st.text_input("Password", type="password", key="login_pass_input")
+                
+                # The Callback: This runs BEFORE the script reruns!
+                def start_login():
+                    st.session_state.is_logging_in = True
+                
+                st.form_submit_button("Login", type="primary", on_click=start_login)
 
 # ==========================================
 #      MAIN INTERFACE
