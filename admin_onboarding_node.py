@@ -519,8 +519,9 @@ def admin_onboarding_node(state):
         joiners_count = db.query(Employee).filter(Employee.onboarding_status != "active").count()
         leaves_count = db.query(LeaveRequest).filter(LeaveRequest.status == "pending_approval").count()
         
+        # DEBUG: I changed the title here to (v2) so you can verify the update worked!
         msg = f"""
-📊 **Admin Dashboard Overview**
+📊 **Admin Dashboard Overview (v2)**
 
 | Category | Pending Count | Command to View |
 | :--- | :---: | :--- |
@@ -598,8 +599,11 @@ _Select a category above to take action._
         user = db.query(Employee).filter(Employee.name.ilike(f"%{name_target}%")).first()
         
         if user:
+            # Normalize status to lowercase to avoid string mismatch issues
+            status_check = str(user.onboarding_status).strip().lower()
+
             # CASE A: Active Employee
-            if user.onboarding_status == "active":
+            if status_check == "active":
                 e_left = max(0, 1 - user.used_emergency_leaves)
                 msg = f"""
 ### 👤 Profile: {user.name}
@@ -609,7 +613,7 @@ _Select a category above to take action._
 - **Leaves:** Paid ({1-user.used_paid_leaves}), Emergency ({e_left})
 """
             # CASE B: Waiting for Candidate (The Fix!)
-            elif user.onboarding_status == "onboarding_triggered":
+            elif status_check == "onboarding_triggered":
                  msg = (
                     f"👤 **Candidate:** {user.name}\n"
                     f"🔄 **Status:** Waiting for Candidate\n\n"
