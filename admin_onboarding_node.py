@@ -435,6 +435,7 @@ admin_onboarding_node.py
 
 
 
+
 """
 admin_onboarding_node.py
 """
@@ -519,7 +520,7 @@ def admin_onboarding_node(state):
         joiners_count = db.query(Employee).filter(Employee.onboarding_status != "active").count()
         leaves_count = db.query(LeaveRequest).filter(LeaveRequest.status == "pending_approval").count()
         
-        # DEBUG: I changed the title here to (v2) so you can verify the update worked!
+        # 👇 I added (v2) here so you can verify the update worked!
         msg = f"""
 📊 **Admin Dashboard Overview (v2)**
 
@@ -599,7 +600,7 @@ _Select a category above to take action._
         user = db.query(Employee).filter(Employee.name.ilike(f"%{name_target}%")).first()
         
         if user:
-            # Normalize status to lowercase to avoid string mismatch issues
+            # Normalize status to lowercase
             status_check = str(user.onboarding_status).strip().lower()
 
             # CASE A: Active Employee
