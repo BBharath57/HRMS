@@ -620,7 +620,7 @@ _Select a category above to take action._
             elif user.onboarding_status == "onboarding_triggered":
                 msg = (
                     f"👤 **Candidate:** {user.name}\n"
-                    f"🔄 **Status:** {user.onboarding_status}\n\n"
+                    f"🔄 **Status:** {user.onboarding_status}\n\n" # here is the code that should be updataed
                     f"⚠️ **Note:** {user.name} has NOT submitted their form yet.\n"
                     f"You can type **'Remind {user.name}'** to send them an email."
                 )
