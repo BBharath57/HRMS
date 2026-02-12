@@ -1756,7 +1756,9 @@ if st.session_state.user_email is None:
                             st.session_state.notification_checked = False
                             
                             # Force immediate rerun
-                            st.rerun()
+                            # st.rerun()
+                            st.stop() # we are making the login form to stop render in the chat session
+
                         else:
                             st.error("❌ Invalid Credentials. Please try again.")
                     except Exception as e:
