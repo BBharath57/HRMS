@@ -1935,6 +1935,11 @@ else:
             st.title("⏳ Under Review")
             st.info("Your details are being reviewed by Admin.")
 
+            # 🔥 auto-refresh every 2 seconds until approved
+            st.experimental_set_query_params(_=time.time())
+            time.sleep(2)
+            st.rerun()
+
         # =========================================================
         #  SCENARIO C: CHAT
         # =========================================================
