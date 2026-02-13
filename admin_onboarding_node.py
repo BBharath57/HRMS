@@ -577,7 +577,7 @@ _Select a category above to take action._
             new_emp = Employee(name=name, email=email, password=password, role="employee", onboarding_status="onboarding_triggered")
             db.add(new_emp); db.commit()
             
-            send_email(email, "Welcome to Volta!", f"Hi {name},\n\nYour account has been created.\n\nLogin: {email}\nPass: {password}\n\nPlease login to complete your onboarding.")
+            send_email(email, "Welcome to Volta!", f"Hi {name},\n\nYour account has been created.\n\nLogin: {email}\nPass: {password}\n\nPlease login to complete your onboarding. Here is the link https://hrmsagent.streamlit.app/")
             
             state["notification"] = f"✅ Created {name}"
             state["messages"].append({"role": "assistant", "content": f"✅ Created user **{name}**. Invitation email sent!"})
@@ -639,7 +639,7 @@ _Select a category above to take action._
         
         if user:
             if user.onboarding_status in ["onboarding_triggered", "details_submitted"]:
-                send_email(user.email, "Action Required: Complete Onboarding", f"Hi {user.name},\n\nPlease login to complete your onboarding.")
+                send_email(user.email, "Action Required: Complete Onboarding", f"Hi {user.name},\n\nPlease login to complete your onboarding. click here https://hrmsagent.streamlit.app/")
                 state["messages"].append({"role": "assistant", "content": f"✅ Reminder sent to **{user.name}**."})
             elif user.onboarding_status == "active":
                 state["messages"].append({"role": "assistant", "content": f"ℹ️ {user.name} is already active."})
@@ -658,7 +658,7 @@ _Select a category above to take action._
             user.employee_id_str = new_id
             user.onboarding_status = "active"
             db.commit()
-            send_email(user.email, f"Welcome to Volta! (ID: {new_id})", f"Hi {user.name},\n\nCongratulations! Your onboarding is complete.\nYour Employee ID is {new_id}.\n\nPlease REFRESH your portal to access the Employee Chat.")
+            send_email(user.email, f"Welcome to Volta! (ID: {new_id})", f"Hi {user.name},\n\nCongratulations! Your onboarding is complete.\nYour Employee ID is {new_id}.\n\nPlease login to the portal with your credentials https://hrmsagent.streamlit.app/.")
             state["messages"].append({"role": "assistant", "content": f"✅ **{user.name}** is now Active (ID: `{new_id}`).\n📧 Welcome email sent."})
         elif user:
              state["messages"].append({"role": "assistant", "content": f"⚠️ {user.name} is not ready (Status: {user.onboarding_status})."})
@@ -674,7 +674,7 @@ _Select a category above to take action._
             rec = db.query(Onboarding).filter(Onboarding.employee_id == user.id).first()
             if rec: rec.data = "" # Reset data
             db.commit()
-            send_email(user.email, "Action Required", "Your submission was rejected. Please refill.")
+            send_email(user.email, "Action Required", "Your submission was rejected. Please refill. link: https://hrmsagent.streamlit.app/")
             state["messages"].append({"role": "assistant", "content": f"❌ Rejected {user.name}. They must refill the form."})
         else:
             state["messages"].append({"role": "assistant", "content": "⚠️ User not in review status."})

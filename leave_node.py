@@ -449,7 +449,7 @@ from email_service import send_email
 import re
 import os
 
-APP_LINK = "https://hrms-luca.onrender.com" 
+APP_LINK = "https://hrmsagent.streamlit.app/" 
 # Recommendation: Send to your personal email to verify it works
 ADMIN_EMAIL = "bharathkumarking143@gmail.com" 
 
@@ -623,7 +623,7 @@ def leave_node(state):
         db.commit()
 
         # Send Email
-        final_body = f"{leave_draft['email_body']}\n\n--------------------------------\n🔴 Admin Action Required: Login to Portal to Approve/Reject."
+        final_body = f"{leave_draft['email_body']}\n\n--------------------------------\n🔴 Admin Action Required: Login to Portal to Approve/Reject.\n link: https://hrmsagent.streamlit.app/"
         
         # 👇 FIX: Check Return Value directly!
         email_success = send_email(
