@@ -1981,7 +1981,7 @@ else:
                 if last_msg["role"] == "assistant":
                     with st.chat_message("assistant", avatar="🤖"): st.markdown(last_msg["content"])
                 
-                st.rerun()
+                # st.rerun()
     finally:
         # ALWAYS CLOSE THE DB SESSION TO PREVENT LEAKS
         db.close()
