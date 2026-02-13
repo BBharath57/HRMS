@@ -1841,18 +1841,18 @@ else:
                             msg = "👋 **Welcome Admin!** All systems operational. No pending requests."
 
                         current_session["messages"].append({"role": "assistant", "content": msg})
-                        st.session_state["notif_dirty"] = True
+                       
                         # time.sleep(1)
-                        # st.rerun()
+                        st.rerun()
 
                     elif current_total > last_total:
                         st.session_state.last_notif_check["admin_pending_count"] = current_total 
                         new_count = current_total - last_total
                         st.toast(f"🔔 {new_count} New Request(s)!", icon="🔔")
                         current_session["messages"].append({"role": "assistant", "content": f"🔔 **New Request Received!**\nTotal Pending: {current_total}\nType **'show pending requests'**."})
-                        st.session_state["notif_dirty"] = True
+                       
                         # time.sleep(2)
-                        # st.rerun()
+                        st.rerun()
                     
                     if current_total != last_total:
                         st.session_state.last_notif_check["admin_pending_count"] = current_total
@@ -1875,9 +1875,9 @@ else:
                             msg = f"👋 **Hi {user_obj.name}!** I'm ready to solve your queries."
                         
                         current_session["messages"].append({"role": "assistant", "content": msg})
-                        st.session_state["notif_dirty"] = True
+                        
                         # time.sleep(1)
-                        # st.rerun()
+                        st.rerun()
 
                     elif last_leave and last_leave.status in ["approved", "rejected"]:
                         last_leave.notification_seen = True
@@ -1886,9 +1886,9 @@ else:
                         msg = f"{icon} **Update:** Your leave for **{last_leave.start_date.date()}** was **{last_leave.status.upper()}**."
                         st.toast(f"Leave {last_leave.status.title()}!", icon=icon)
                         current_session["messages"].append({"role": "assistant", "content": msg})
-                        st.session_state["notif_dirty"] = True
+                        
                         # time.sleep(2)
-                        # st.rerun()
+                        st.rerun()
             finally:
                 local_db.close()
 
@@ -1994,9 +1994,7 @@ else:
                 
                 # st.rerun()
 
-        if st.session_state.get("notif_dirty"):
-            st.session_state["notif_dirty"] = False
-            st.rerun()
+        
     finally:
         # ALWAYS CLOSE THE DB SESSION TO PREVENT LEAKS
         db.close()
