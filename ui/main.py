@@ -1757,6 +1757,8 @@ if st.session_state.user_email is None:
                             
                             # Force immediate rerun
                             st.rerun()
+                            # st.stop() # we are making the login form to stop render in the chat session
+                            
 
                         else:
                             st.error("❌ Invalid Credentials. Please try again.")
@@ -1839,6 +1841,8 @@ else:
                             msg = "👋 **Welcome Admin!** All systems operational. No pending requests."
 
                         current_session["messages"].append({"role": "assistant", "content": msg})
+                       
+                        # time.sleep(1)
                         st.rerun()
 
                     elif current_total > last_total:
@@ -1846,7 +1850,12 @@ else:
                         new_count = current_total - last_total
                         st.toast(f"🔔 {new_count} New Request(s)!", icon="🔔")
                         current_session["messages"].append({"role": "assistant", "content": f"🔔 **New Request Received!**\nTotal Pending: {current_total}\nType **'show pending requests'**."})
+                       
+                        # time.sleep(2)
                         st.rerun()
+                    
+                    # if current_total != last_total:
+                    #     st.session_state.last_notif_check["admin_pending_count"] = current_total
 
                 # --- EMPLOYEE CHECK ---
                 elif role == "employee":
@@ -1866,6 +1875,8 @@ else:
                             msg = f"👋 **Hi {user_obj.name}!** I'm ready to solve your queries."
                         
                         current_session["messages"].append({"role": "assistant", "content": msg})
+                        
+                        # time.sleep(1)
                         st.rerun()
 
                     elif last_leave and last_leave.status in ["approved", "rejected"]:
@@ -1875,6 +1886,8 @@ else:
                         msg = f"{icon} **Update:** Your leave for **{last_leave.start_date.date()}** was **{last_leave.status.upper()}**."
                         st.toast(f"Leave {last_leave.status.title()}!", icon=icon)
                         current_session["messages"].append({"role": "assistant", "content": msg})
+                        
+                        # time.sleep(2)
                         st.rerun()
             finally:
                 local_db.close()
@@ -1926,23 +1939,27 @@ else:
             st.title("⏳ Under Review")
             st.info("Your details are being reviewed by Admin.")
 
+            
+
+            # 🔥 auto-refresh every 2 seconds until approved
+            # st.experimental_set_query_params(_=time.time())
+            # time.sleep(2)
+            # st.rerun()
+
         # =========================================================
-        #  SCENARIO C: CHAT (NOW WITH STREAMING!)
+        #  SCENARIO C: CHAT
         # =========================================================
         else:
             st.title(f"💬 {role.title()} Assistant")
             
-            # Display Chat History
             for msg in current_session["messages"]:
                 avatar = "🤖" if msg["role"] == "assistant" else "🧑‍💻"
                 with st.chat_message(msg["role"], avatar=avatar): st.markdown(msg["content"])
 
             if user_input := st.chat_input("Type here..."):
-                # 1. Add User Message
                 current_session["messages"].append({"role": "user", "content": user_input})
                 with st.chat_message("user", avatar="🧑‍💻"): st.markdown(user_input)
                 
-                # 2. Prepare Graph State
                 state = {
                     "message": user_input, "user_id": user_email, "role": role, 
                     "messages": current_session["messages"], "db": db, "retriever": retriever, "llm": llm, "db_user": user_obj,
@@ -1952,45 +1969,47 @@ else:
                 }
                 
                 graph = build_graph(db, retriever, llm)
-                
-                # 3. Stream Response
-                with st.chat_message("assistant", avatar="🤖"):
-                    message_placeholder = st.empty()
-                    full_response = ""
-                    final_state = None
+                with st.status("🤖 **Agent is thinking...**", expanded=True) as status:
+                    st.write("🔄 Analyzing user intent...")
                     
-                    # Status indicator for "Thinking" phase
-                    with st.status("🤖 Processing...", expanded=True) as status:
-                        
-                        # 🚀 STREAM_MODE="VALUES" IS KEY: It yields the FULL STATE at every step
-                        for event in graph.stream(state, stream_mode="values"):
-                            final_state = event # Keep track of valid state
-                            
-                            # Check if there is a message to show
-                            if "messages" in event and event["messages"]:
-                                last_msg = event["messages"][-1]
-                                
-                                # Only stream assistant messages
-                                if isinstance(last_msg, dict) and last_msg.get("role") == "assistant":
-                                    full_response = last_msg["content"]
-                                    # Update UI with "typing" effect
-                                    message_placeholder.markdown(full_response + "▌") 
-                        
-                        status.update(label="✅ Complete", state="complete", expanded=False)
+                    assistant_placeholder = st.empty()
+                    streamed_text = ""
+                    final_state = None   # <-- IMPORTANT
 
-                    # Final update (remove cursor)
-                    message_placeholder.markdown(full_response)
-                
-                # 4. Save Final State to Session
-                if final_state:
-                    current_session["messages"] = final_state["messages"]
-                    current_session["graph_context"]["onboarding_active"] = final_state.get("onboarding_active", False)
-                    current_session["graph_context"]["leave_draft"] = final_state.get("leave_draft", {})
+                    for chunk in graph.stream(state):
+                        if "messages" in chunk:
+                            final_state = chunk              # keep last valid state
+                            last = chunk["messages"][-1]
+                            if last["role"] == "assistant":
+                                streamed_text = last["content"]
+                                assistant_placeholder.markdown(streamed_text)
+
+                    # SAFETY FALLBACK
+                    if final_state is None:
+                        final_state = graph.invoke(state)
                     
-                    if final_state.get("notification"): 
-                        st.toast(final_state["notification"], icon="🔔")
-                        time.sleep(1)
+                    intent = final_state.get("intent", "unknown")
+                    if intent == "leave": st.write("🗓️ Accessing Leave Module...")
+                    elif intent == "admin_onboarding": st.write("🔐 Checking Admin Database...")
+                    elif intent == "hr_query": st.write("📚 Searching Employee Handbook...")
+                    
+                    status.update(label="✅ Response Ready", state="complete", expanded=False)
+
+                current_session["messages"] = final_state["messages"]
+                current_session["graph_context"]["onboarding_active"] = final_state.get("onboarding_active", False)
+                current_session["graph_context"]["leave_draft"] = final_state.get("leave_draft", {})
                 
+                if final_state.get("notification"): 
+                    st.toast(final_state["notification"], icon="🔔")
+                    time.sleep(1) # Small delay for action toast
+                
+                last_msg = final_state["messages"][-1]
+                if last_msg["role"] == "assistant":
+                    with st.chat_message("assistant", avatar="🤖"): st.markdown(last_msg["content"])
+                
+                # st.rerun()
+
+        
     finally:
         # ALWAYS CLOSE THE DB SESSION TO PREVENT LEAKS
         db.close()
