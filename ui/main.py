@@ -1725,7 +1725,7 @@ if st.session_state.user_email is None:
     
     with login_container:
         st.title("🏢 VOLTA HR Portal")
-        st.info("Log in with your Admin credentials.")
+        st.info("Log in with your credentials.")
         
         with st.form("login_form", clear_on_submit=True):
             email_input = st.text_input("Email", key="login_email")
@@ -1836,9 +1836,9 @@ else:
                         st.session_state.last_notif_check["admin_pending_count"] = current_total
                         
                         if current_total > 0:
-                            msg = f"👋 **Welcome Admin!**\nUpdates: {p_leave} Leave, {p_onboard} Onboarding pending.\nType **'show pending requests'**."
+                            msg = f"👋 **Welcome Admin!**\n\nUpdates: {p_leave} Leave, {p_onboard} Onboarding pending.\n\nType **'show pending requests'**."
                         else:
-                            msg = "👋 **Welcome Admin!** All systems operational. No pending requests."
+                            msg = "👋 **Welcome Admin!** whatsup"
 
                         current_session["messages"].append({"role": "assistant", "content": msg})
                        
