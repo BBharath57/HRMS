@@ -1819,7 +1819,7 @@ else:
         # =========================================================
         #  🔄 NOTIFICATION LOGIC
         # =========================================================
-        @st.fragment(run_every=3)
+        @st.fragment
         def poll_notifications():
             if not st.session_state.user_email: return
             local_db = SessionLocal()
@@ -1841,16 +1841,16 @@ else:
                             msg = "👋 **Welcome Admin!** All systems operational. No pending requests."
 
                         current_session["messages"].append({"role": "assistant", "content": msg})
-                        time.sleep(1)
-                        st.rerun()
+                        # time.sleep(1)
+                        # st.rerun()
 
                     elif current_total > last_total:
                         st.session_state.last_notif_check["admin_pending_count"] = current_total 
                         new_count = current_total - last_total
                         st.toast(f"🔔 {new_count} New Request(s)!", icon="🔔")
                         current_session["messages"].append({"role": "assistant", "content": f"🔔 **New Request Received!**\nTotal Pending: {current_total}\nType **'show pending requests'**."})
-                        time.sleep(2)
-                        st.rerun()
+                        # time.sleep(2)
+                        # st.rerun()
                     
                     if current_total != last_total:
                         st.session_state.last_notif_check["admin_pending_count"] = current_total
@@ -1873,8 +1873,8 @@ else:
                             msg = f"👋 **Hi {user_obj.name}!** I'm ready to solve your queries."
                         
                         current_session["messages"].append({"role": "assistant", "content": msg})
-                        time.sleep(1)
-                        st.rerun()
+                        # time.sleep(1)
+                        # st.rerun()
 
                     elif last_leave and last_leave.status in ["approved", "rejected"]:
                         last_leave.notification_seen = True
@@ -1883,8 +1883,8 @@ else:
                         msg = f"{icon} **Update:** Your leave for **{last_leave.start_date.date()}** was **{last_leave.status.upper()}**."
                         st.toast(f"Leave {last_leave.status.title()}!", icon=icon)
                         current_session["messages"].append({"role": "assistant", "content": msg})
-                        time.sleep(2)
-                        st.rerun()
+                        # time.sleep(2)
+                        # st.rerun()
             finally:
                 local_db.close()
 
