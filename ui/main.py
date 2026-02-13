@@ -1971,17 +1971,22 @@ else:
                 graph = build_graph(db, retriever, llm)
                 with st.status("🤖 **Agent is thinking...**", expanded=True) as status:
                     st.write("🔄 Analyzing user intent...")
+                    
                     assistant_placeholder = st.empty()
                     streamed_text = ""
+                    final_state = None   # <-- IMPORTANT
 
                     for chunk in graph.stream(state):
                         if "messages" in chunk:
+                            final_state = chunk              # keep last valid state
                             last = chunk["messages"][-1]
                             if last["role"] == "assistant":
                                 streamed_text = last["content"]
                                 assistant_placeholder.markdown(streamed_text)
 
-                    final_state = chunk
+                    # SAFETY FALLBACK
+                    if final_state is None:
+                        final_state = graph.invoke(state)
                     
                     intent = final_state.get("intent", "unknown")
                     if intent == "leave": st.write("🗓️ Accessing Leave Module...")
