@@ -1854,8 +1854,8 @@ else:
                         # time.sleep(2)
                         st.rerun()
                     
-                    if current_total != last_total:
-                        st.session_state.last_notif_check["admin_pending_count"] = current_total
+                    # if current_total != last_total:
+                    #     st.session_state.last_notif_check["admin_pending_count"] = current_total
 
                 # --- EMPLOYEE CHECK ---
                 elif role == "employee":
@@ -1939,7 +1939,7 @@ else:
             st.title("⏳ Under Review")
             st.info("Your details are being reviewed by Admin.")
 
-            st.session_state["notif_dirty"] = True
+            
 
             # 🔥 auto-refresh every 2 seconds until approved
             # st.experimental_set_query_params(_=time.time())
@@ -1971,7 +1971,17 @@ else:
                 graph = build_graph(db, retriever, llm)
                 with st.status("🤖 **Agent is thinking...**", expanded=True) as status:
                     st.write("🔄 Analyzing user intent...")
-                    final_state = graph.invoke(state)
+                    assistant_placeholder = st.empty()
+                    streamed_text = ""
+
+                    for chunk in graph.stream(state):
+                        if "messages" in chunk:
+                            last = chunk["messages"][-1]
+                            if last["role"] == "assistant":
+                                streamed_text = last["content"]
+                                assistant_placeholder.markdown(streamed_text)
+
+                    final_state = chunk
                     
                     intent = final_state.get("intent", "unknown")
                     if intent == "leave": st.write("🗓️ Accessing Leave Module...")
