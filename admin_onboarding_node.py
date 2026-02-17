@@ -559,7 +559,7 @@ _Select a category above to take action._
             is_start_cmd = True
 
     if is_start_cmd:
-        msg = "👋 **Sure!** To onboard, please type:\n`Onboard Name, Email, Password`"
+        msg = "👋 **Sure!** To onboard, please type:\n`Onboard Name, Email, Password`" # did changes here
         state["messages"].append({"role": "assistant", "content": msg})
         return state
 

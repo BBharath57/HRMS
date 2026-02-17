@@ -1819,7 +1819,7 @@ else:
         # =========================================================
         #  🔄 NOTIFICATION LOGIC
         # =========================================================
-        @st.fragment(run_every=2)
+        @st.fragment(run_every=2) # Checks every 2 seconds for updates 
         def poll_notifications():
             if not st.session_state.user_email: return
             local_db = SessionLocal()
