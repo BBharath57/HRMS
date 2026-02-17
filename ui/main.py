@@ -1753,7 +1753,7 @@ if st.session_state.user_email is None:
                             # Then set session state
                             st.session_state.user_email = user.email
                             st.session_state.role = user.role
-                            st.session_state.notification_checked = False
+                            st.session_state.notification_checked = False #Reset notification check on login
                             
                             # Force immediate rerun
                             st.rerun()
@@ -1819,7 +1819,7 @@ else:
         # =========================================================
         #  🔄 NOTIFICATION LOGIC
         # =========================================================
-        @st.fragment(run_every=2) # Checks every 2 seconds for updates 
+        @st.fragment(run_every=2) # checks 2 seconds for updates
         def poll_notifications():
             if not st.session_state.user_email: return
             local_db = SessionLocal()
