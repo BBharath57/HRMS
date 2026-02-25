@@ -267,6 +267,10 @@ def router_node(state):
             state["intent"] = "hr_query"
             return state
 
+        if any(k in message for k in ["leave", "leaves", "vacation", "sick"]) and "details" not in message:
+            state["intent"] = "admin_leave"
+            return state
+
         # B. Dashboard & Actions -> Admin Onboarding Node
         # FIX: Explicitly added 'leaves', 'onboarding', 'remind', 'finalize', 'reject'
         admin_keywords = [
@@ -279,10 +283,10 @@ def router_node(state):
             state["intent"] = "admin_onboarding"
             return state
 
-        # C. Explicit Leave Actions (Approve/Reject) -> Admin Leave Node
-        if any(k in message for k in ["approve", "leave", "vacation"]) and "details" not in message:
-            state["intent"] = "admin_leave"
-            return state
+        # # C. Explicit Leave Actions (Approve/Reject) -> Admin Leave Node
+        # if any(k in message for k in ["approve", "leave", "vacation"]) and "details" not in message:
+        #     state["intent"] = "admin_leave"
+        #     return state
         
         # D. Fallback
         state["intent"] = "hr_query"

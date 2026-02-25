@@ -338,7 +338,7 @@ def admin_onboarding_node(state):
         if not candidates:
             state["messages"].append({"role": "assistant", "content": "✅ No onboarding requests pending."})
         else:
-            submitted = []
+            submitted = []  
             pending = []
             
             for c in candidates:

@@ -162,13 +162,15 @@ def extract_name(message, triggers):
     """Helper to extract name"""
     for t in triggers:
         message = message.replace(t, "")
-    message = message.replace("for", "").strip()
+    message = message.replace("for", "").strip() #need to invitegate this more
     return message
 
 def admin_leave_node(state):
+    
     db = state["db"]
     message = state.get("message", "").lower()
     user_id = state["user_id"] 
+
     if "messages" not in state: state["messages"] = []
 
     pending_leaves = db.query(LeaveRequest).filter(LeaveRequest.status == "pending_approval").all()
