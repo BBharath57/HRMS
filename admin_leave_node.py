@@ -286,7 +286,7 @@ def admin_leave_node(state):
     for leave in pending_leaves:
         emp = db.query(Employee).filter(Employee.id == leave.employee_id).first()
         msg += f"- **{emp.name}**: {leave.leave_type.title()} ({leave.start_date.date()})\n"
-    msg += "\nCommands:\n- **'Approve leaves'**\n- **'Approve leave for [name]'**\n- **'Reject leave for [name]'**"
+    msg += "\nCommands:\n- **'Approve leaves [all]'**\n- **'Approve leave for [name]'**\n- **'Reject leave for [name]'**"
     state["messages"].append({"role": "assistant", "content": msg})
 
     return state
