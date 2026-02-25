@@ -308,4 +308,7 @@ def router_node(state):
 
     # Default
     state["intent"] = "hr_query"
+
+    # ADD THIS LINE RIGHT HERE:
+    print(f"🕵️ DEBUG ROUTER: Message='{message}' | Routed Intent='{state.get('intent')}'")
     return state
