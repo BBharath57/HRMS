@@ -155,6 +155,9 @@ class Employee(Base):
     used_paid_leaves = Column(Integer, default=0)
     used_emergency_leaves = Column(Integer, default=0)
 
+    leave_requests = relationship("LeaveRequest", back_populates="employee")
+    onboarding_record = relationship("Onboarding", back_populates="employee", uselist=False)
+
 class Onboarding(Base):
     __tablename__ = "onboarding"
     
@@ -163,6 +166,7 @@ class Onboarding(Base):
     step = Column(Integer, default=1)
     data = Column(Text, nullable=True) # Stores JSON/Text data from forms
     completed = Column(Boolean, default=False)
+    employee = relationship("Employee", back_populates="onboarding_record")
 
 class LeaveRequest(Base):
     __tablename__ = "leave_requests"
@@ -177,3 +181,4 @@ class LeaveRequest(Base):
     manager_comments = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     notification_seen = Column(Boolean, default=False)
+    employee = relationship("Employee", back_populates="leave_requests")
