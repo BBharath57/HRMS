@@ -7,6 +7,7 @@ tiktoken
 langchain-google-genai
 langchain-huggingface
 langchain-pinecone
+langchain_groq
 streamlit
 langchain-text-splitters
 google-generativeai
