@@ -87,22 +87,19 @@ def hr_rag_node(state):
     #                 break
 
     if role == "admin":
-        # FIX 1: Broadened the keywords to catch "all employees"
         if any(kw in user_input.lower() for kw in ["list", "directory", "all employee", "everyone", "all the employee"]):
             all_emps = db.query(Employee).all()
-            # FIX 2: Added the Email column to the directory string!
             directory_data = "| Name | Role | Status | Email |\n|---|---|---|---|\n"
             for e in all_emps: 
                 directory_data += f"| {e.name} | {e.role} | {e.onboarding_status} | {e.email} |\n"
         else:
-            # FIX 3: Removed the 'break' statement so it finds MULTIPLE people
             found_contexts = []
             for emp in db.query(Employee).all():
-                if emp.name.lower() in user_input.lower() and len(emp.name) > 2:
+                # Make sure we don't crash on empty names, and capture everyone mentioned
+                if emp.name and len(emp.name) > 2 and emp.name.lower() in user_input.lower():
                     found_contexts.append(get_employee_context(db, emp))
             
             if found_contexts:
-                # Join all found employees together
                 target_emp_context = "\n---\n".join(found_contexts)
 
     docs = retriever.invoke(user_input)
