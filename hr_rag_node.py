@@ -74,17 +74,36 @@ def hr_rag_node(state):
     target_emp_context = "None"
     directory_data = "None"
     
+    # if role == "admin":
+    #     if "list" in user_input.lower() or "directory" in user_input.lower():
+    #         all_emps = db.query(Employee).all()
+    #         directory_data = "| Name | Role | Status | Email |\n|---|---|---|\n"
+    #         for e in all_emps: directory_data += f"| {e.name} | {e.role} | {e.onboarding_status} | {e.email} |\n"
+    #     else:
+    #         # Smart Search: Look for names in the prompt
+    #         for emp in db.query(Employee).all():
+    #             if emp.name.lower() in user_input.lower() and len(user_input) > 4:
+    #                 target_emp_context = get_employee_context(db, emp)
+    #                 break
+
     if role == "admin":
-        if "list" in user_input.lower() or "directory" in user_input.lower():
+        # FIX 1: Broadened the keywords to catch "all employees"
+        if any(kw in user_input.lower() for kw in ["list", "directory", "all employee", "everyone", "all the employee"]):
             all_emps = db.query(Employee).all()
-            directory_data = "| Name | Role | Status | Email |\n|---|---|---|\n"
-            for e in all_emps: directory_data += f"| {e.name} | {e.role} | {e.onboarding_status} | {e.email} |\n"
+            # FIX 2: Added the Email column to the directory string!
+            directory_data = "| Name | Role | Status | Email |\n|---|---|---|---|\n"
+            for e in all_emps: 
+                directory_data += f"| {e.name} | {e.role} | {e.onboarding_status} | {e.email} |\n"
         else:
-            # Smart Search: Look for names in the prompt
+            # FIX 3: Removed the 'break' statement so it finds MULTIPLE people
+            found_contexts = []
             for emp in db.query(Employee).all():
-                if emp.name.lower() in user_input.lower() and len(user_input) > 4:
-                    target_emp_context = get_employee_context(db, emp)
-                    break
+                if emp.name.lower() in user_input.lower() and len(emp.name) > 2:
+                    found_contexts.append(get_employee_context(db, emp))
+            
+            if found_contexts:
+                # Join all found employees together
+                target_emp_context = "\n---\n".join(found_contexts)
 
     docs = retriever.invoke(user_input)
     chat_history = format_chat_history(messages)
