@@ -77,8 +77,8 @@ def hr_rag_node(state):
     if role == "admin":
         if "list" in user_input.lower() or "directory" in user_input.lower():
             all_emps = db.query(Employee).all()
-            directory_data = "| Name | Role | Status |\n|---|---|---|\n"
-            for e in all_emps: directory_data += f"| {e.name} | {e.role} | {e.onboarding_status} |\n"
+            directory_data = "| Name | Role | Status | Email |\n|---|---|---|\n"
+            for e in all_emps: directory_data += f"| {e.name} | {e.role} | {e.onboarding_status} | {e.email} |\n"
         else:
             # Smart Search: Look for names in the prompt
             for emp in db.query(Employee).all():
