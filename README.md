@@ -28,20 +28,25 @@ The current repository is being organized incrementally. The main entry point an
 
 ```text
 HRMS/
-├── ui/
-│   └── main.py                 # Streamlit application entry point
-├── hr_graph.py                 # LangGraph workflow orchestration
-├── router_node.py              # Intent routing
-├── onboarding_node.py          # Employee onboarding workflow
-├── leave_node.py               # Employee leave workflow
-├── admin_onboarding_node.py    # Admin onboarding workflow
-├── admin_leave_node.py         # Admin leave workflow
-├── hr_rag_node.py              # HR knowledge / RAG workflow
-├── state.py                    # Shared graph state
-├── db.py                       # SQLAlchemy database setup
-├── models.py                   # Database models
-├── email_service.py            # Email notifications
-├── rag_pipeline.py             # Vector retrieval and LLM setup
+├── app/
+│   ├── agents/
+│   │   ├── graph.py
+│   │   ├── state.py
+│   │   └── nodes/
+│   │       ├── router_node.py
+│   │       ├── onboarding_node.py
+│   │       ├── leave_node.py
+│   │       ├── admin_onboarding_node.py
+│   │       ├── admin_leave_node.py
+│   │       └── hr_rag_node.py
+│   ├── database/
+│   │   ├── db.py
+│   │   └── models.py
+│   └── services/
+│       ├── email_service.py
+│       └── rag_pipeline.py
+├── ui/main.py
+├── root-level compatibility shims
 ├── requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml
