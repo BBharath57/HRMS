@@ -112,19 +112,25 @@ Streamlit normally opens the app in your browser at `http://localhost:8501`.
 
 ## Docker
 
-The repository includes a `Dockerfile` and `docker-compose.yml`. Review and replace all development-only passwords in the Compose configuration before using it outside a local environment.
+The repository includes a `Dockerfile` for the Streamlit app and a Compose file for PostgreSQL and pgAdmin. Before starting Compose:
 
-Build the application image:
+1. Copy `.env.example` to `.env`.
+2. Set a strong `POSTGRES_PASSWORD`, `PGADMIN_DEFAULT_EMAIL`, and `PGADMIN_DEFAULT_PASSWORD`.
+3. If running Streamlit directly on your host and using the Compose database, set `DATABASE_URL` to a SQLAlchemy PostgreSQL URL using `localhost` and the configured port. Otherwise, the current `db.py` falls back to SQLite when `DATABASE_URL` is unset.
+
+Start the database services:
+
+```bash
+docker compose up -d db pgadmin
+```
+
+To build the application image separately:
 
 ```bash
 docker build -t hrms .
 ```
 
-Start the configured services:
-
-```bash
-docker compose up --build
-```
+The Compose file does not currently define an application container; run Streamlit from your activated Python environment with `streamlit run ui/main.py`.
 
 ## Database and Maintenance Scripts
 
