@@ -46,7 +46,13 @@ HRMS/
 │       ├── email_service.py
 │       └── rag_pipeline.py
 ├── ui/main.py
-├── root-level compatibility shims
+├── scripts/                    # Maintenance and admin scripts
+│   ├── init_db.py
+│   ├── create_admin.py
+│   ├── reset_db.py
+│   ├── add_notification_seen_column.py
+│   ├── reset_pincone.py
+│   └── check_models.py
 ├── requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml
@@ -141,7 +147,7 @@ The Compose file does not currently define an application container; run Streaml
 
 ## Database and Maintenance Scripts
 
-The repository contains database setup and maintenance scripts. Inspect a script before running it, especially scripts that reset tables or delete/recreate a vector index. Back up data before any destructive operation.
+The repository contains database setup and maintenance scripts. Maintenance scripts are located in `scripts/`. Run them from the repository root with commands such as `python -m scripts.init_db`. Inspect a script before running it, especially scripts that reset tables or delete/recreate a vector index. Back up data before any destructive operation.
 
 ## Security Notes
 
