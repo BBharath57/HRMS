@@ -1,8 +1,8 @@
 # """
 # admin_leave_node.py
 # """
-# from models import LeaveRequest, Employee
-# from email_service import send_email
+# from app.database.models import LeaveRequest, Employee
+# from app.services.email_service import send_email
 # from datetime import datetime
 
 # def extract_name(message, triggers):
@@ -154,8 +154,8 @@
 """
 admin_leave_node.py
 """
-from models import LeaveRequest, Employee
-from email_service import send_email
+from app.database.models import LeaveRequest, Employee
+from app.services.email_service import send_email
 from datetime import datetime
 
 def extract_name(message, triggers):

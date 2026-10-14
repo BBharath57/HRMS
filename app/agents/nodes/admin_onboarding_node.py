@@ -2,7 +2,7 @@
 # admin_onboarding_node.py
 # """
 # from models import Employee, Onboarding
-# from email_service import send_email
+# from app.services.email_service import send_email
 # import random
 # from datetime import datetime
 
@@ -293,8 +293,8 @@
 """
 admin_onboarding_node.py
 """
-from models import Employee, Onboarding, LeaveRequest
-from email_service import send_email
+from app.database.models import Employee, Onboarding, LeaveRequest
+from app.services.email_service import send_email
 import random
 from datetime import datetime
 

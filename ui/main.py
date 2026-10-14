@@ -3,7 +3,6 @@ ui/main.py
 """
 import streamlit as st
 import os
-import sys
 import time
 from sqlalchemy import desc, inspect
 
@@ -92,17 +91,12 @@ def remove_fading_animations():
 # ⚡ EXECUTE CSS IMMEDIATELY (Before DB Connection)
 remove_fading_animations()
 
-# --- PATH SETUP ---
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
-sys.path.insert(0, parent_dir)
-
 # --- IMPORTS ---
-from db import get_db, engine, Base, SessionLocal
-import models 
-from models import Employee, Onboarding, LeaveRequest
-from rag_pipeline import retriever, llm
-from hr_graph import build_graph
+from app.database.db import get_db, engine, Base, SessionLocal
+import app.database.models as models
+from app.database.models import Employee, Onboarding, LeaveRequest
+from app.services.rag_pipeline import retriever, llm
+from app.agents.graph import build_graph
 
 # ==========================================
 # 3. ⚡ CACHED DATABASE SETUP (THE FIX)
