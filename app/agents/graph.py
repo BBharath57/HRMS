@@ -11,15 +11,15 @@
 #     sys.path.insert(0, current_dir)
 
 # from langgraph.graph import StateGraph, END
-# from state import HRState
+# from app.agents.state import HRState
 
 # # Import Nodes
-# from router_node import router_node
-# from onboarding_node import onboarding_node
-# from leave_node import leave_node
-# from hr_rag_node import hr_rag_node
-# from admin_leave_node import admin_leave_node
-# from admin_onboarding_node import admin_onboarding_node # <--- NEW IMPORT
+# from app.agents.nodes.router_node import router_node
+# from app.agents.nodes.onboarding_node import onboarding_node
+# from app.agents.nodes.leave_node import leave_node
+# from app.agents.nodes.hr_rag_node import hr_rag_node
+# from app.agents.nodes.admin_leave_node import admin_leave_node
+# from app.agents.nodes.admin_onboarding_node import admin_onboarding_node # <--- NEW IMPORT
 
 # def build_graph(db, retriever, llm):
 #     workflow = StateGraph(HRState)
@@ -67,15 +67,15 @@ if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
 from langgraph.graph import StateGraph, END
-from state import HRState
+from app.agents.state import HRState
 
 # Import Nodes
-from router_node import router_node
-from onboarding_node import onboarding_node
-from leave_node import leave_node
-from hr_rag_node import hr_rag_node
-from admin_onboarding_node import admin_onboarding_node
-from admin_leave_node import admin_leave_node
+from app.agents.nodes.router_node import router_node
+from app.agents.nodes.onboarding_node import onboarding_node
+from app.agents.nodes.leave_node import leave_node
+from app.agents.nodes.hr_rag_node import hr_rag_node
+from app.agents.nodes.admin_onboarding_node import admin_onboarding_node
+from app.agents.nodes.admin_leave_node import admin_leave_node
 
 # def decide_next_node(state):
 #     role = state.get("role")

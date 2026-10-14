@@ -2,9 +2,9 @@
 # """
 # leave_node.py
 # """
-# from models import LeaveRequest, Employee
+# from app.database.models import LeaveRequest, Employee
 # from datetime import datetime
-# from email_service import send_email
+# from app.services.email_service import send_email
 # import re
 
 # APP_LINK = "http://localhost:8501"
@@ -255,9 +255,9 @@
 """
 leave_node.py
 """
-from models import LeaveRequest, Employee
+from app.database.models import LeaveRequest, Employee
 from datetime import datetime
-from email_service import send_email
+from app.services.email_service import send_email
 import re
 import os
 

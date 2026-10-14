@@ -1,8 +1,8 @@
 """
 hr_rag_node.py
 """
-from rag_pipeline import retriever, llm
-from models import Employee, LeaveRequest
+from app.services.rag_pipeline import retriever, llm
+from app.database.models import Employee, LeaveRequest
 from sqlalchemy import desc
 
 HELP_MENU = {

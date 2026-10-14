@@ -2,8 +2,8 @@
 # """
 # onboarding_node.py
 # """
-# from models import Employee, Onboarding
-# from email_service import send_email
+# from app.database.models import Employee, Onboarding
+# from app.services.email_service import send_email
 
 # def onboarding_node(state):
 #     db = state["db"]
@@ -157,8 +157,8 @@
 """
 onboarding_node.py
 """
-# from models import Employee, Onboarding
-# from email_service import send_email
+# from app.database.models import Employee, Onboarding
+# from app.services.email_service import send_email
 
 # def onboarding_node(state):
 #     db = state["db"]
@@ -237,8 +237,8 @@ onboarding_node.py
 """
 onboarding_node.py
 """
-from models import Employee, Onboarding
-from email_service import send_email
+from app.database.models import Employee, Onboarding
+from app.services.email_service import send_email
 
 def onboarding_node(state):
     db = state["db"]

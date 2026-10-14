@@ -128,7 +128,7 @@ from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, T
 from sqlalchemy.orm import relationship
 from datetime import datetime
 # 👇 THIS IS THE FIX: Import Base from db.py instead of creating a new one
-from db import Base 
+from app.database.db import Base 
 
 class Employee(Base):
     __tablename__ = "employees"
