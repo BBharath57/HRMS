@@ -112,16 +112,17 @@ def initialize_system():
         
         # 2. Create Admin User
         db = SessionLocal()
-        admin_email = os.getenv("SENDER_EMAIL") 
-        
-        # Only query if admin_email is set
-        if admin_email:
+        admin_email = os.getenv("ADMIN_EMAIL")
+        admin_password = os.getenv("ADMIN_INITIAL_PASSWORD")
+
+        # Never create an admin account with a hardcoded default password.
+        if admin_email and admin_password:
             existing_admin = db.query(Employee).filter(Employee.email == admin_email).first()
             if not existing_admin:
                 admin = Employee(
-                    name="Bharath Admin",
+                    name="HRMS Admin",
                     email=admin_email,
-                    password="Admin", 
+                    password=admin_password,
                     role="admin",
                     onboarding_status="active"
                 )
@@ -130,6 +131,8 @@ def initialize_system():
                 print(f"✅ ADMIN USER CREATED: {admin_email}")
             else:
                 print("✅ Admin user already exists.")
+        else:
+            print("ℹ️ Admin bootstrap skipped: set ADMIN_EMAIL and ADMIN_INITIAL_PASSWORD to enable it.")
         db.close()
     except Exception as e:
         print(f"⚠️ SETUP EXCEPTION: {e}")

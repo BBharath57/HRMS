@@ -100,6 +100,8 @@ HRMS/
 | `GEMINI_API_KEY` | Google Gemini API key for embeddings |
 | `GROQ_API_KEY` | Groq API key for the chat model |
 | `PINECONE_API_KEY` | Pinecone credentials, if required by your Pinecone environment |
+| `ADMIN_EMAIL` | Optional email for initial admin account creation |
+| `ADMIN_INITIAL_PASSWORD` | Strong initial admin password; only used if the admin does not exist |
 | `SENDER_EMAIL` | Sender address for SMTP notifications |
 | `SENDER_PASSWORD` | SMTP/Gmail app password; keep secret |
 
@@ -144,6 +146,7 @@ The repository contains database setup and maintenance scripts. Inspect a script
 ## Security Notes
 
 - Never commit `.env`, API keys, SMTP passwords, or database credentials.
+- Set `ADMIN_EMAIL` and a strong `ADMIN_INITIAL_PASSWORD` only when bootstrapping the first admin. The app no longer creates an admin with a hardcoded default password.
 - Use strong, unique credentials for admin accounts and databases.
 - Replace development-only credentials in `docker-compose.yml` before exposing services.
 - If a real credential was ever committed to Git history, rotate it; removing it from the current file alone does not invalidate it.
