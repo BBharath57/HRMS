@@ -24,7 +24,7 @@ An AI-assisted Human Resource Management System built with Streamlit, LangGraph,
 
 ## Repository Layout
 
-The application code is organized into packages for agent workflows, database access, and external services. Root-level compatibility modules remain for older scripts and imports.
+The application code is organized into packages for agent workflows, database access, and external services. The Streamlit entry point lives in `ui/`; maintenance and administrative scripts live in `scripts/`.
 
 ```text
 HRMS/
