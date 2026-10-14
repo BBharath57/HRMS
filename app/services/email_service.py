@@ -35,7 +35,6 @@ def send_email(to_email, subject, body, cc_emails=None):
         # 🚀 SECURE CONNECTION WITH TIMEOUT
         # ----------------------------------------------
         server = smtplib.SMTP(smtp_server, smtp_port, timeout=timeout_seconds)
-        server.set_debuglevel(1)  # Print debug logs to terminal
         
         server.starttls()  # Encrypt the connection
         server.login(sender_email, sender_password)

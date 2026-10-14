@@ -24,7 +24,7 @@ An AI-assisted Human Resource Management System built with Streamlit, LangGraph,
 
 ## Repository Layout
 
-The current repository is being organized incrementally. The main entry point and modules currently include:
+The application code is organized into packages for agent workflows, database access, and external services. Root-level compatibility modules remain for older scripts and imports.
 
 ```text
 HRMS/
@@ -148,6 +148,7 @@ The repository contains database setup and maintenance scripts. Inspect a script
 - Never commit `.env`, API keys, SMTP passwords, or database credentials.
 - Set `ADMIN_EMAIL` and a strong `ADMIN_INITIAL_PASSWORD` only when bootstrapping the first admin. The app no longer creates an admin with a hardcoded default password.
 - Use strong, unique credentials for admin accounts and databases.
+- Before production use, review the existing authentication implementation: the current application compares stored passwords directly rather than using a password-hashing scheme. Do not treat this refactor as a complete security audit.
 - Replace development-only credentials in `docker-compose.yml` before exposing services.
 - If a real credential was ever committed to Git history, rotate it; removing it from the current file alone does not invalidate it.
 
