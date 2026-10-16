@@ -3,6 +3,7 @@ ui/main.py
 """
 import streamlit as st
 import os
+import sys
 import time
 from sqlalchemy import desc, inspect
 
@@ -91,17 +92,24 @@ def remove_fading_animations():
 # ⚡ EXECUTE CSS IMMEDIATELY (Before DB Connection)
 remove_fading_animations()
 
+# --- PATH SETUP ---
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
+sys.path.insert(0, parent_dir)
+
 # --- IMPORTS ---
-from app.database.db import get_db, engine, Base, SessionLocal
-import app.database.models as models
-from app.database.models import Employee, Onboarding, LeaveRequest
-from app.services.rag_pipeline import retriever, llm
-from app.agents.graph import build_graph
+from db import get_db, engine, Base, SessionLocal
+import models 
+from models import Employee, Onboarding, LeaveRequest
+from rag_pipeline import retriever, llm
+from hr_graph import build_graph
 
 # ==========================================
 # 3. ⚡ CACHED DATABASE SETUP (THE FIX)
 # ==========================================
 # 👇 This decorator stops it from running every time!
+# admin_email = "bharathkumarking143@gmail.com"
+
 @st.cache_resource 
 def initialize_system():
     """Forces table creation and Admin user generation on startup."""
@@ -112,17 +120,16 @@ def initialize_system():
         
         # 2. Create Admin User
         db = SessionLocal()
-        admin_email = os.getenv("ADMIN_EMAIL")
-        admin_password = os.getenv("ADMIN_INITIAL_PASSWORD")
-
-        # Never create an admin account with a hardcoded default password.
-        if admin_email and admin_password:
+        admin_email = os.getenv("SENDER_EMAIL") 
+        
+        # Only query if admin_email is set
+        if admin_email:
             existing_admin = db.query(Employee).filter(Employee.email == admin_email).first()
             if not existing_admin:
                 admin = Employee(
-                    name="HRMS Admin",
+                    name="Bharath Admin",
                     email=admin_email,
-                    password=admin_password,
+                    password="Admin", 
                     role="admin",
                     onboarding_status="active"
                 )
@@ -131,8 +138,6 @@ def initialize_system():
                 print(f"✅ ADMIN USER CREATED: {admin_email}")
             else:
                 print("✅ Admin user already exists.")
-        else:
-            print("ℹ️ Admin bootstrap skipped: set ADMIN_EMAIL and ADMIN_INITIAL_PASSWORD to enable it.")
         db.close()
     except Exception as e:
         print(f"⚠️ SETUP EXCEPTION: {e}")
